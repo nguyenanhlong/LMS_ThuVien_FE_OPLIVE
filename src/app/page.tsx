@@ -268,7 +268,11 @@ export default function Home() {
 
   const sectionTitle = useMemo(() => {
     if (!isManager) {
-      const userTitles: Record<Section, string> = { books: 'Tra Cứu Sách', loans: 'Phiếu Mượn Của Tôi' };
+      const userTitles: Record<Section, string> = {
+        books: 'Tra Cứu Sách', loans: 'Phiếu Mượn Của Tôi',
+        dashboard: '',
+        users: ''
+      };
       return userTitles[section] || 'Tra Cứu Sách';
     }
     const titles: Record<Section, string> = { dashboard: 'Tổng Quan', books: 'Quản Lý Sách', users: 'Quản Lý Độc Giả', loans: 'Quản Lý Mượn Trả' };
