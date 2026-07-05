@@ -9,6 +9,9 @@ function statusBadge(status: string) {
     REJECTED: { label: 'Đã từ chối', variant: 'danger' },
     RETURNED: { label: 'Đã trả', variant: 'muted' },
     PENDING_RETURN: { label: 'Chờ xác nhận trả', variant: 'info' },
+    BORROWING: { label: 'Đang mượn', variant: 'success' },
+    OVERDUE: { label: 'Quá hạn', variant: 'danger' },
+    CANCELLED: { label: 'Đã hủy', variant: 'muted' },
   };
   const s = map[status] || { label: status, variant: 'muted' };
   return <Badge variant={s.variant}>{s.label}</Badge>;

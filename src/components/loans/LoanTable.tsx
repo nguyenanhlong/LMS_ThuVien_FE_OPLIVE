@@ -5,11 +5,13 @@ import Badge from '@/components/ui/Badge';
 
 function statusBadge(status: string) {
   const map: Record<string, { label: string; variant: string }> = {
-    PENDING: { label: 'Chờ duyệt', variant: 'warning' },
+    PENDING: { label: 'Chờ xác nhận trả', variant: 'info' },
     APPROVED: { label: 'Đang mượn', variant: 'success' },
     REJECTED: { label: 'Đã từ chối', variant: 'danger' },
     RETURNED: { label: 'Đã trả', variant: 'muted' },
-    PENDING_RETURN: { label: 'Chờ xác nhận trả', variant: 'info' },
+    BORROWING: { label: 'Đang mượn', variant: 'success' },
+    OVERDUE: { label: 'Quá hạn', variant: 'danger' },
+    CANCELLED: { label: 'Đã hủy', variant: 'muted' },
   };
   const s = map[status] || { label: status, variant: 'muted' };
   return <Badge variant={s.variant}>{s.label}</Badge>;
@@ -21,15 +23,12 @@ function actionButtons(row: any, role: string, onApprove?: (id: string) => void,
   if (role === 'MANAGER') {
     if (status === 'PENDING') {
       return (
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button onClick={() => onApprove?.(row.id)} className="btn btn-success" style={{ padding: '6px 12px', fontSize: '0.8125rem' }}>Duyệt</button>
-          <button onClick={() => onReject?.(row.id)} className="btn btn-danger" style={{ padding: '6px 12px', fontSize: '0.8125rem' }}>Từ Chối</button>
-        </div>
+        <button onClick={() => onReturn?.(row)} className="btn btn-success" style={{ padding: '6px 12px', fontSize: '0.8125rem' }}>Xác Nhận Trả</button>
       );
     }
-    if (status === 'PENDING_RETURN') {
+    if (status === 'APPROVED' || status === 'OVERDUE') {
       return (
-        <button onClick={() => onReturn?.(row)} className="btn btn-success" style={{ padding: '6px 12px', fontSize: '0.8125rem' }}>Duyệt Trả</button>
+        <button onClick={() => onReturn?.(row)} className="btn btn-success" style={{ padding: '6px 12px', fontSize: '0.8125rem' }}>Thu Hồi</button>
       );
     }
     return <span style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>—</span>;
@@ -41,7 +40,7 @@ function actionButtons(row: any, role: string, onApprove?: (id: string) => void,
         <button onClick={() => onReturn?.(row)} className="btn btn-primary" style={{ padding: '6px 12px', fontSize: '0.8125rem' }}>Trả Sách</button>
       );
     }
-    if (status === 'PENDING_RETURN') {
+    if (status === 'PENDING') {
       return <span style={{ color: '#fbbf24', fontSize: '0.875rem' }}>Đang chờ xử lý</span>;
     }
     return <span style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>—</span>;

@@ -1,13 +1,25 @@
 'use client';
 
+
+
+interface UserInfo {
+  id: number;
+  username: string;
+  email: string;
+  full_name: string;
+  role: string;
+}
+
 export default function Header({
   onToggleSidebar,
   role,
-  onRoleChange,
+  user,
+  onLogout,
 }: {
   onToggleSidebar?: () => void;
   role: 'USER' | 'MANAGER';
-  onRoleChange: (role: 'USER' | 'MANAGER') => void;
+  user?: UserInfo | null;
+  onLogout?: () => void;
 }) {
   return (
     <header className="header">
@@ -24,21 +36,15 @@ export default function Header({
             THƯ VIỆN <span className="gradient-text">SỐ</span>
           </div>
         </div>
-        <div className="role-switcher">
-          <button
-            onClick={() => onRoleChange('USER')}
-            className={`role-btn ${role === 'USER' ? 'active' : ''}`}
-            id="btn-role-user"
-          >
-            Người Đọc
-          </button>
-          <button
-            onClick={() => onRoleChange('MANAGER')}
-            className={`role-btn ${role === 'MANAGER' ? 'active' : ''}`}
-            id="btn-role-manager"
-          >
-            Quản Thủ
-          </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <span style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
+            {user?.full_name || user?.username} ({role === 'MANAGER' ? 'Quản Thủ' : 'Độc Giả'})
+          </span>
+          {onLogout && (
+            <button onClick={onLogout} className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '0.8125rem', cursor: 'pointer' }}>
+              Thoát
+            </button>
+          )}
         </div>
       </div>
     </header>

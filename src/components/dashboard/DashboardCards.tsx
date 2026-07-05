@@ -12,7 +12,7 @@ export default function DashboardCards({ totalBooks, availableBooks, borrowedBoo
       {[
         { val: totalBooks, lbl: 'Tổng đầu sách', cls: 'gradient-text' },
         { val: availableBooks, lbl: 'Sách sẵn có', cls: '', color: 'var(--success)' },
-        { val: borrowedBooks, lbl: 'Sách đang mượn', cls: '', color: 'var(--error)' },
+        { val: borrowedBooks, lbl: 'Đang mượn', cls: '', color: 'var(--error)' },
         { val: totalMembers, lbl: 'Tổng độc giả', cls: '', color: 'var(--primary)' },
         { val: pendingLoans, lbl: 'Yêu cầu chờ', cls: '', color: 'var(--warning)' },
       ].map((item, i) => (

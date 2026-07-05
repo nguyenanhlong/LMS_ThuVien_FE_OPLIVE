@@ -31,15 +31,15 @@ export default function ReturnModal({ open, loan, onConfirm, onCancel, loading, 
         <div className="modal-body">
           <div className="form-group">
             <label>Độc giả</label>
-            <input className="form-control" value={loan.userName || ''} disabled />
+            <input className="form-control" value={loan?.userName || ''} disabled />
           </div>
           <div className="form-group">
             <label>Tên sách</label>
-            <input className="form-control" value={loan.book?.title || ''} disabled />
+            <input className="form-control" value={loan?.book?.title || ''} disabled />
           </div>
           <div className="form-group">
             <label>Hạn trả</label>
-            <input className="form-control" value={loan.dueDate || '-'} disabled />
+            <input className="form-control" value={loan?.dueDate || '-'} disabled />
           </div>
           <div className="modal-actions">
             <button onClick={onCancel} className="btn btn-secondary" disabled={loading}>Hủy</button>

@@ -12,7 +12,7 @@ export default function DashboardChart({ availableBooks, borrowedBooks, totalMem
     { name: 'Sách có sẵn', value: availableBooks, fill: '#10b981' },
     { name: 'Đang mượn', value: borrowedBooks, fill: '#ef4444' },
     { name: 'Độc giả', value: totalMembers, fill: '#6366f1' },
-    { name: 'Chờ duyệt', value: pendingLoans, fill: '#f59e0b' },
+    { name: 'Chờ xác nhận', value: pendingLoans, fill: '#f59e0b' },
   ];
 
   return (
