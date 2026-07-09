@@ -3,57 +3,29 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { api } from '@/lib/api';
+import { mapBook, mapLoan } from '@/utils/mappers';
 
 import Header from '@/components/layout/Header';
 import Sidebar from '@/components/layout/Sidebar';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
-import BookCard from '@/components/books/BookCard';
-import BookTable from '@/components/books/BookTable';
-import BookModal from '@/components/books/BookModal';
-import BorrowModal from '@/components/books/BorrowModal';
-import LoanTable from '@/components/loans/LoanTable';
-import LoanHistory from '@/components/loans/LoanHistory';
-import ReturnModal from '@/components/loans/ReturnModal';
-import DashboardCards from '@/components/dashboard/DashboardCards';
-import DashboardChart from '@/components/dashboard/DashboardChart';
-import RecentLoans from '@/components/dashboard/RecentLoans';
 import Toast from '@/components/ui/Toast';
 import Spinner from '@/components/ui/Spinner';
 
-const categories = ['Tất cả', 'Kỹ năng sống', 'Tiểu thuyết', 'Khoa học', 'Tài chính'];
+import LoginPage from '@/components/auth/LoginPage';
+import DashboardPage from '@/components/dashboard/DashboardPage';
+import BooksPage from '@/components/books/BooksPage';
+import UsersPage from '@/components/users/UsersPage';
+import UserEditModal from '@/components/users/UserEditModal';
+import LoansPage from '@/components/loans/LoansPage';
+
+import BookModal from '@/components/books/BookModal';
+import BorrowModal from '@/components/books/BorrowModal';
+import ReturnModal from '@/components/loans/ReturnModal';
 
 type Section = 'dashboard' | 'books' | 'users' | 'loans';
-
 const MANAGER_SECTIONS: Section[] = ['dashboard', 'books', 'users', 'loans'];
 const USER_SECTIONS: Section[] = ['books', 'loans'];
-
-function mapBook(b: any) {
-  const available = (b.total_quantity || 0) - (b.borrowed_quantity || 0);
-  return {
-    id: String(b.id),
-    title: b.title,
-    author: b.author || '',
-    category: b.publisher || 'Khác',
-    description: b.description || '',
-    total_quantity: b.total_quantity || 0,
-    borrowed_quantity: b.borrowed_quantity || 0,
-    status: available > 0 ? 'AVAILABLE' : 'BORROWED',
-  };
-}
-
-function mapLoan(l: any) {
-  const firstBook = l.books?.[0] || {};
-  return {
-    id: String(l.id),
-    book: { id: String(firstBook.book_id || ''), title: firstBook.title || '', author: firstBook.author || '' },
-    userName: l.borrower?.full_name || '',
-    requestDate: l.loan_date ? new Date(l.loan_date).toLocaleDateString('vi-VN') : '',
-    dueDate: l.due_date ? new Date(l.due_date).toLocaleDateString('vi-VN') : '',
-    returnDate: l.return_date ? new Date(l.return_date).toLocaleDateString('vi-VN') : '',
-    status: l.status === 'BORROWING' ? 'APPROVED' : l.status === 'RETURNED' ? 'RETURNED' : l.status === 'OVERDUE' ? 'OVERDUE' : l.status === 'PENDING' ? 'PENDING' : 'REJECTED',
-  };
-}
 
 export default function Home() {
   const { user, loading: authLoading, login, register, logout, isManager } = useAuth();
@@ -80,7 +52,7 @@ export default function Home() {
   const [userModal, setUserModal] = useState<any>(null);
 
   const [bookModal, setBookModal] = useState<boolean | any>(false);
-  const [borrowModal, setBorrowModal] = useState<{ id: string; title: string } | null>(null);
+  const [borrowModal, setBorrowModal] = useState<any>(null);
   const [returnModal, setReturnModal] = useState<any>(null);
 
   const showToast = useCallback((text: string, type: 'success' | 'error' = 'success') => {
@@ -169,7 +141,6 @@ export default function Home() {
   const activeLoans = useMemo(() => loans.filter((l: any) => l.status !== 'RETURNED'), [loans]);
   const completedLoans = useMemo(() => loans.filter((l: any) => l.status === 'RETURNED'), [loans]);
   const pendingLoans = useMemo(() => loans.filter((l: any) => l.status === 'PENDING'), [loans]);
-  const borrowedBooks = useMemo(() => filteredBooks.filter((b: any) => b.borrowed_quantity > 0), [filteredBooks]);
 
   const handleNavigate = (path: string) => {
     const sectionMap: Record<string, Section> = { '/dashboard': 'dashboard', '/books': 'books', '/users': 'users', '/loans': 'loans' };
@@ -262,16 +233,11 @@ export default function Home() {
     } catch { showToast('Lỗi khi cập nhật', 'error'); }
   };
 
-  const handleRequestReturn = async (loan: any) => {
-    setReturnModal(loan);
-  };
-
   const sectionTitle = useMemo(() => {
     if (!isManager) {
       const userTitles: Record<Section, string> = {
         books: 'Tra Cứu Sách', loans: 'Phiếu Mượn Của Tôi',
-        dashboard: '',
-        users: ''
+        dashboard: '', users: ''
       };
       return userTitles[section] || 'Tra Cứu Sách';
     }
@@ -279,270 +245,18 @@ export default function Home() {
     return titles[section];
   }, [section, isManager]);
 
-  const renderAuth = () => (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-primary)' }}>
-      <div className="glass-panel" style={{ padding: '40px', width: '100%', maxWidth: '420px' }}>
-        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-          <h1 style={{ fontSize: '1.75rem', fontWeight: 800 }}>THƯ VIỆN <span className="gradient-text">SỐ</span></h1>
-          <p style={{ color: 'var(--text-muted)', marginTop: '8px' }}>
-            {authMode === 'login' ? 'Đăng nhập để tiếp tục' : 'Tạo tài khoản mới'}
-          </p>
-        </div>
-
-        {authError && (
-          <div style={{ padding: '12px', borderRadius: '8px', marginBottom: '16px', background: authError.includes('thành công') ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)', color: authError.includes('thành công') ? 'var(--success)' : 'var(--error)', fontSize: '0.875rem', textAlign: 'center' }}>
-            {authError}
-          </div>
-        )}
-
-        {authMode === 'login' ? (
-          <form onSubmit={handleLogin}>
-            <div className="form-group">
-              <label>Tên đăng nhập</label>
-              <input className="form-control" placeholder="Nhập username" value={loginUser} onChange={(e) => setLoginUser(e.target.value)} autoFocus />
-            </div>
-            <div className="form-group">
-              <label>Mật khẩu</label>
-              <input className="form-control" type="password" placeholder="Nhập mật khẩu" value={loginPass} onChange={(e) => setLoginPass(e.target.value)} />
-            </div>
-            <button type="submit" className="btn btn-primary btn-full" disabled={authSubmitting} style={{ marginTop: '8px' }}>
-              {authSubmitting ? 'Đang đăng nhập...' : 'Đăng Nhập'}
-            </button>
-            <p style={{ textAlign: 'center', marginTop: '16px', fontSize: '0.875rem', color: 'var(--text-muted)' }}>
-              Chưa có tài khoản?{' '}
-              <button type="button" onClick={() => { setAuthMode('register'); setAuthError(''); }} style={{ color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>
-                Đăng ký
-              </button>
-            </p>
-          </form>
-        ) : (
-          <form onSubmit={handleRegister}>
-            <div className="form-group">
-              <label>Tên đăng nhập</label>
-              <input className="form-control" placeholder="username" value={regData.username} onChange={(e) => setRegData({ ...regData, username: e.target.value })} autoFocus />
-            </div>
-            <div className="form-group">
-              <label>Họ và tên</label>
-              <input className="form-control" placeholder="Nguyễn Văn A" value={regData.full_name} onChange={(e) => setRegData({ ...regData, full_name: e.target.value })} />
-            </div>
-            <div className="form-group">
-              <label>Email</label>
-              <input className="form-control" type="email" placeholder="email@example.com" value={regData.email} onChange={(e) => setRegData({ ...regData, email: e.target.value })} />
-            </div>
-            <div className="form-group">
-              <label>Mật khẩu</label>
-              <input className="form-control" type="password" placeholder="Ít nhất 8 ký tự, có chữ hoa, chữ thường, số và ký tự đặc biệt" value={regData.password} onChange={(e) => setRegData({ ...regData, password: e.target.value })} />
-            </div>
-            <div className="form-group">
-              <label>Vai trò</label>
-              <select className="form-control" value={regData.role} onChange={(e) => setRegData({ ...regData, role: e.target.value })} style={{ background: 'var(--bg-tertiary)' }}>
-                <option value="MEMBER">Độc giả</option>
-                <option value="LIBRARIAN">Thủ thư</option>
-              </select>
-            </div>
-            <button type="submit" className="btn btn-primary btn-full" disabled={authSubmitting} style={{ marginTop: '8px' }}>
-              {authSubmitting ? 'Đang đăng ký...' : 'Đăng Ký'}
-            </button>
-            <p style={{ textAlign: 'center', marginTop: '16px', fontSize: '0.875rem', color: 'var(--text-muted)' }}>
-              Đã có tài khoản?{' '}
-              <button type="button" onClick={() => { setAuthMode('login'); setAuthError(''); }} style={{ color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>
-                Đăng nhập
-              </button>
-            </p>
-          </form>
-        )}
-      </div>
-    </div>
-  );
-
-  const renderContent = () => {
-    if (booksLoading && !books.length) {
-      return <div className="empty-state"><p>Đang tải dữ liệu...</p></div>;
-    }
-    switch (section) {
-      case 'dashboard':
-        return (
-          <>
-            <DashboardCards
-              totalBooks={books.length}
-              availableBooks={books.filter((b: any) => b.status === 'AVAILABLE').length}
-              borrowedBooks={activeLoans.length}
-              totalMembers={users.length}
-              pendingLoans={pendingLoans.length}
-            />
-            <div style={{ marginTop: '24px' }}>
-              <DashboardChart
-                availableBooks={books.filter((b: any) => b.status === 'AVAILABLE').length}
-                borrowedBooks={activeLoans.length}
-                totalMembers={users.length}
-                pendingLoans={pendingLoans.length}
-              />
-            </div>
-            <div style={{ marginTop: '24px' }}>
-              <h2 className="section-title">Hoạt Động Gần Đây</h2>
-              <RecentLoans loans={[...loans].reverse().slice(0, 5)} loading={loansLoading} />
-            </div>
-          </>
-        );
-
-      case 'books':
-        return (
-          <div>
-            <div style={{ display: 'flex', gap: '16px', marginBottom: '24px', flexWrap: 'wrap', alignItems: 'center' }}>
-              <input className="form-control" style={{ maxWidth: '360px', background: 'var(--bg-secondary)' }} placeholder="Tìm kiếm sách..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                {categories.map((c) => (
-                  <button key={c} onClick={() => setSelectedCategory(c)} className={`category-pill ${selectedCategory === c ? 'active' : ''}`}>{c}</button>
-                ))}
-              </div>
-            </div>
-
-            {!isManager ? (
-              booksLoading ? (
-                <div className="loading-grid">{[1, 2, 3, 4, 5, 6].map((i) => <div key={i} className="book-card-skeleton" />)}</div>
-              ) : !filteredBooks.length ? (
-                <div className="empty-state"><p>Không tìm thấy sách nào</p></div>
-              ) : (
-                <div className="grid-3">{filteredBooks.map((book: any) => (
-                  <BookCard key={book.id} book={book} onBorrow={(id, title) => setBorrowModal({ id, title })} />
-                ))}</div>
-              )
-            ) : (
-              <BookTable
-                books={filteredBooks} loading={booksLoading}
-                onEdit={(book) => setBookModal(book)}
-                onDelete={handleDeleteBook}
-                onAdd={() => setBookModal(true)}
-              />
-            )}
-          </div>
-        );
-
-      case 'users':
-        return (
-          <div>
-            <div className="manager-header-actions">
-              <h2 className="section-title">Danh Sách Độc Giả</h2>
-            </div>
-            {usersLoading ? (
-              <div className="empty-state"><p>Đang tải...</p></div>
-            ) : !users.length ? (
-              <div className="empty-state"><p>Chưa có độc giả nào</p></div>
-            ) : (
-              <div className="table-wrapper glass-panel">
-                <table className="custom-table">
-                  <thead>
-                    <tr>
-                      <th>Họ Tên</th>
-                      <th>Email</th>
-                      <th>Username</th>
-                      <th>Vai Trò</th>
-                      <th>Trạng Thái</th>
-                      <th>Hành Động</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {users.map((u: any) => (
-                      <tr key={u.id}>
-                        <td><span style={{ fontWeight: 600 }}>{u.full_name}</span></td>
-                        <td>{u.email}</td>
-                        <td style={{ color: 'var(--text-muted)' }}>{u.username}</td>
-                        <td>
-                          <span className={`badge ${u.role === 'ADMIN' ? 'badge-danger' : u.role === 'LIBRARIAN' ? 'badge-warning' : 'badge-success'}`}>
-                            {u.role === 'ADMIN' ? 'Quản Trị' : u.role === 'LIBRARIAN' ? 'Thủ Thư' : 'Độc Giả'}
-                          </span>
-                        </td>
-                        <td>
-                          <span className={`badge ${u.is_active ? 'badge-success' : 'badge-danger'}`}>
-                            {u.is_active ? 'Hoạt động' : 'Vô hiệu'}
-                          </span>
-                        </td>
-                        <td>
-                          <button onClick={() => setUserModal(u)} className="btn btn-edit" style={{ padding: '6px 14px', fontSize: '0.8125rem' }}>
-                            Sửa
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-            {userModal && (
-              <div className="modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) setUserModal(null); }}>
-                <div className="modal-content glass-panel">
-                  <div className="modal-header">
-                    <div>
-                      <h3 className="modal-title">Chỉnh Sửa Độc Giả</h3>
-                      <p className="modal-subtitle">{userModal.full_name}</p>
-                    </div>
-                    <button onClick={() => setUserModal(null)} className="modal-close">
-                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4l8 8M12 4l-8 8" /></svg>
-                    </button>
-                  </div>
-                  <form onSubmit={(e) => { e.preventDefault(); const fd = new FormData(e.currentTarget); handleUpdateUser({ role: fd.get('role'), is_active: fd.get('is_active') === 'true' }); }}>
-                    <div className="form-group">
-                      <label>Vai trò</label>
-                      <select name="role" className="form-control" defaultValue={userModal.role} style={{ background: 'var(--bg-tertiary)' }}>
-                        <option value="MEMBER">Độc Giả</option>
-                        <option value="LIBRARIAN">Thủ Thư</option>
-                        <option value="ADMIN">Quản Trị</option>
-                      </select>
-                    </div>
-                    <div className="form-group">
-                      <label>Trạng thái</label>
-                      <select name="is_active" className="form-control" defaultValue={String(userModal.is_active)} style={{ background: 'var(--bg-tertiary)' }}>
-                        <option value="true">Hoạt động</option>
-                        <option value="false">Vô hiệu</option>
-                      </select>
-                    </div>
-                    <div className="modal-actions">
-                      <button type="button" onClick={() => setUserModal(null)} className="btn btn-secondary">Hủy</button>
-                      <button type="submit" className="btn btn-primary">Lưu Thay Đổi</button>
-                    </div>
-                  </form>
-                </div>
-              </div>
-            )}
-          </div>
-        );
-
-      case 'loans':
-        return (
-          <div>
-            {isManager && pendingLoans.length > 0 && (
-              <div style={{ marginBottom: '24px' }}>
-                <h2 className="section-title" style={{ color: 'var(--primary)' }}>Yêu Cầu Trả Sách Đang Chờ</h2>
-                <LoanTable
-                  loans={pendingLoans} loading={loansLoading}
-                  role="MANAGER"
-                  onReturn={(loan) => setReturnModal(loan)}
-                />
-              </div>
-            )}
-            <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', flexWrap: 'wrap' }}>
-              <h2 className="section-title" style={{ marginBottom: 0 }}>Danh Sách Mượn Trả</h2>
-            </div>
-            <LoanTable
-              loans={isManager ? activeLoans.filter((l: any) => l.status !== 'PENDING') : activeLoans}
-              loading={loansLoading}
-              role={isManager ? 'MANAGER' : 'USER'}
-              onApprove={handleApprove} onReject={handleReject}
-              onReturn={isManager ? (loan) => setReturnModal(loan) : handleRequestReturn}
-            />
-            {completedLoans.length > 0 && (
-              <div style={{ marginTop: '40px' }}>
-                <h2 className="section-title">Lịch Sử Mượn Trả</h2>
-                <LoanHistory loans={completedLoans} loading={loansLoading} />
-              </div>
-            )}
-          </div>
-        );
-    }
-  };
-
   if (authLoading) return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Spinner /></div>;
-  if (!user) return renderAuth();
+  if (!user) return (
+    <LoginPage
+      authMode={authMode} setAuthMode={setAuthMode}
+      authError={authError} setAuthError={setAuthError}
+      loginUser={loginUser} setLoginUser={setLoginUser}
+      loginPass={loginPass} setLoginPass={setLoginPass}
+      regData={regData} setRegData={setRegData}
+      authSubmitting={authSubmitting}
+      handleLogin={handleLogin} handleRegister={handleRegister}
+    />
+  );
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', flexDirection: 'column' }}>
@@ -556,7 +270,58 @@ export default function Home() {
 
         <main className="main-content container" style={{ paddingTop: '24px' }}>
           <Navbar title={sectionTitle} role={isManager ? 'MANAGER' : 'USER'} />
-          {renderContent()}
+
+          {section === 'dashboard' && (
+            <DashboardPage
+              books={books} activeLoans={activeLoans}
+              users={users} pendingLoans={pendingLoans}
+              loans={loans} loansLoading={loansLoading}
+            />
+          )}
+
+          {section === 'books' && (
+            <BooksPage
+              isManager={isManager} booksLoading={booksLoading}
+              filteredBooks={filteredBooks}
+              searchTerm={searchTerm} setSearchTerm={setSearchTerm}
+              selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory}
+              onAdd={() => setBookModal(true)}
+              onEdit={(book: any) => setBookModal(book)}
+              onDelete={handleDeleteBook}
+              onBorrow={setBorrowModal}
+            />
+          )}
+
+          {section === 'users' && (
+            <>
+              <UsersPage
+                users={users} usersLoading={usersLoading}
+                onEditUser={setUserModal}
+                onUpdateUser={handleUpdateUser}
+              />
+              {userModal && (
+                <UserEditModal
+                  user={userModal}
+                  onClose={() => setUserModal(null)}
+                  onUpdate={handleUpdateUser}
+                />
+              )}
+            </>
+          )}
+
+          {section === 'loans' && (
+            <LoansPage
+              isManager={isManager}
+              pendingLoans={pendingLoans}
+              activeLoans={activeLoans}
+              completedLoans={completedLoans}
+              loansLoading={loansLoading}
+              onApprove={handleApprove}
+              onReject={handleReject}
+              onReturn={(loan: any) => setReturnModal(loan)}
+            />
+          )}
+
         </main>
       </div>
 
