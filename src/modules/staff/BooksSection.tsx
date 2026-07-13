@@ -1,13 +1,20 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { api } from '@/lib/api';
+import { graphqlQuery } from '@/lib/api';
 import { mapBook } from '@/utils/mappers';
 import BookTable from '@/components/books/BookTable';
 import BookModal from '@/components/books/BookModal';
 import Toast from '@/components/ui/Toast';
 
 const categories = ['Tất cả', 'Kỹ năng sống', 'Tiểu thuyết', 'Khoa học', 'Tài chính'];
+
+const subCategoryMap: Record<string, number> = {
+  'Kỹ năng sống': 1,
+  'Tiểu thuyết': 2,
+  'Khoa học': 3,
+  'Tài chính': 4,
+};
 
 export default function BooksSection() {
   const [books, setBooks] = useState<any[]>([]);
@@ -25,8 +32,27 @@ export default function BooksSection() {
   const fetchBooks = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await api<any>(`/books?keyword=${encodeURIComponent(searchTerm)}&pageSize=100`);
-      setBooks((data.items || []).map(mapBook));
+      const res = await graphqlQuery(`
+        query GetBooks($query: GetBooksInput) {
+          books(query: $query) {
+            items {
+              id
+              title
+              author
+              publisher
+              description
+              total_quantity
+              borrowed_quantity
+            }
+          }
+        }
+      `, {
+        query: {
+          keyword: searchTerm,
+          pageSize: 100
+        }
+      });
+      setBooks((res.books?.items || []).map(mapBook));
     } catch { setBooks([]); }
     setLoading(false);
   }, [searchTerm]);
@@ -40,9 +66,21 @@ export default function BooksSection() {
 
   const handleAdd = async (data: any) => {
     try {
-      await api('/books', {
-        method: 'POST',
-        body: JSON.stringify({ title: data.title, author: data.author, description: data.description, publisher: data.category, total_quantity: 1 }),
+      await graphqlQuery(`
+        mutation CreateBook($input: CreateBookInput!) {
+          createBook(input: $input) {
+            id
+          }
+        }
+      `, {
+        input: {
+          title: data.title,
+          author: data.author,
+          description: data.description,
+          publisher: data.category,
+          sub_category_id: subCategoryMap[data.category] || 1,
+          total_quantity: 1
+        }
       });
       showToast('Thêm đầu sách mới thành công!', 'success');
       setBookModal(false); fetchBooks();
@@ -51,9 +89,21 @@ export default function BooksSection() {
 
   const handleUpdate = async (data: any) => {
     try {
-      await api(`/books/${bookModal?.id}`, {
-        method: 'PUT',
-        body: JSON.stringify({ title: data.title, author: data.author, description: data.description, publisher: data.category }),
+      await graphqlQuery(`
+        mutation UpdateBook($id: ID!, $input: UpdateBookInput!) {
+          updateBook(id: $id, input: $input) {
+            id
+          }
+        }
+      `, {
+        id: bookModal?.id,
+        input: {
+          title: data.title,
+          author: data.author,
+          description: data.description,
+          publisher: data.category,
+          sub_category_id: subCategoryMap[data.category] || 1
+        }
       });
       showToast('Cập nhật thông tin sách thành công!', 'success');
       setBookModal(false); fetchBooks();
@@ -62,7 +112,11 @@ export default function BooksSection() {
 
   const handleDelete = async (id: string) => {
     try {
-      await api(`/books/${id}`, { method: 'DELETE' });
+      await graphqlQuery(`
+        mutation DeleteBook($id: ID!) {
+          deleteBook(id: $id)
+        }
+      `, { id });
       showToast('Xóa sách thành công!', 'success');
       fetchBooks();
     } catch { showToast('Lỗi khi xóa sách', 'error'); }

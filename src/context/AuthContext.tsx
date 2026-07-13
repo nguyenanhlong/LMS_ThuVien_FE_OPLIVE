@@ -1,6 +1,6 @@
 'use client';
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
-import { api, loginApi, registerApi, clearTokens, getToken } from '@/lib/api';
+import { loginApi, registerApi, clearTokens, getToken } from '@/lib/api';
 
 interface UserInfo {
   id: number;
