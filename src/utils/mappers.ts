@@ -19,8 +19,9 @@ export function mapLoan(l: any) {
     book: { id: String(firstBook.book_id || ''), title: firstBook.title || '', author: firstBook.author || '' },
     userName: l.borrower?.full_name || '',
     requestDate: l.loan_date ? new Date(l.loan_date).toLocaleDateString('vi-VN') : '',
-    dueDate: l.due_date ? new Date(l.due_date).toLocaleDateString('vi-VN') : '',
-    returnDate: l.return_date ? new Date(l.return_date).toLocaleDateString('vi-VN') : '',
-    status: l.status === 'BORROWING' ? 'APPROVED' : l.status === 'RETURNED' ? 'RETURNED' : l.status === 'OVERDUE' ? 'OVERDUE' : l.status === 'PENDING' ? 'PENDING' : 'REJECTED',
+    dueDate: firstBook.due_date ? new Date(firstBook.due_date).toLocaleDateString('vi-VN') : '',
+    returnDate: firstBook.return_date ? new Date(firstBook.return_date).toLocaleDateString('vi-VN') : '',
+    status: l.status,
+    _raw: l,
   };
 }

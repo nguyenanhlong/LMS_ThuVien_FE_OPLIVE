@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { api } from '@/lib/api';
+import { graphqlQuery } from '@/lib/api';
 import { mapBook } from '@/utils/mappers';
 import BookCard from '@/components/books/BookCard';
 import BorrowModal from '@/components/books/BorrowModal';
@@ -25,8 +25,27 @@ export default function BooksSection({ user, onLoanCreated }: any) {
   const fetchBooks = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await api<any>(`/books?keyword=${encodeURIComponent(searchTerm)}&pageSize=100`);
-      setBooks((data.items || []).map(mapBook));
+      const res = await graphqlQuery(`
+        query GetBooks($query: GetBooksInput) {
+          books(query: $query) {
+            items {
+              id
+              title
+              author
+              publisher
+              description
+              total_quantity
+              borrowed_quantity
+            }
+          }
+        }
+      `, {
+        query: {
+          keyword: searchTerm,
+          pageSize: 100
+        }
+      });
+      setBooks((res.books?.items || []).map(mapBook));
     } catch { setBooks([]); }
     setLoading(false);
   }, [searchTerm]);
@@ -41,13 +60,17 @@ export default function BooksSection({ user, onLoanCreated }: any) {
   const handleBorrow = async (readerName: string, readerId: string) => {
     if (!borrowModal) return;
     try {
-      await api('/loans', {
-        method: 'POST',
-        body: JSON.stringify({
+      await graphqlQuery(`
+        mutation CreateLoan($input: CreateLoanInput!) {
+          createLoan(input: $input) {
+            id
+          }
+        }
+      `, {
+        input: {
           user_id: parseInt(readerId),
-          due_date: new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0],
-          items: [{ book_id: parseInt(borrowModal.id), quantity: 1 }],
-        }),
+          items: [{ book_id: parseInt(borrowModal.id), quantity: 1, borrow_days: 14 }]
+        }
       });
       showToast('Tạo phiếu mượn thành công!', 'success');
       setBorrowModal(null);

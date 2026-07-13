@@ -1,17 +1,15 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { api } from '@/lib/api';
+import { graphqlQuery } from '@/lib/api';
 import { mapLoan } from '@/utils/mappers';
 import LoanTable from '@/components/loans/LoanTable';
 import LoanHistory from '@/components/loans/LoanHistory';
-import ReturnModal from '@/components/loans/ReturnModal';
 import Toast from '@/components/ui/Toast';
 
 export default function LoansSection({ user }: any) {
   const [loans, setLoans] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [returnModal, setReturnModal] = useState<any>(null);
   const [toast, setToast] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
   const showToast = useCallback((text: string, type: 'success' | 'error' = 'success') => {
@@ -22,27 +20,75 @@ export default function LoansSection({ user }: any) {
   const fetchLoans = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await api<any>(`/loans?pageSize=100&user_id=${user.id}`);
-      setLoans((data.items || []).map(mapLoan));
+      const res = await graphqlQuery(`
+        query GetLoans($query: GetLoansInput) {
+          loans(query: $query) {
+            items {
+              id
+              loan_date
+              status
+              cancelled_reason
+              total_deposit
+              total_rental_fee
+              total_amount
+              total_fine
+              total_lost_fee
+              total_initial_payment
+              total_deposit_refund
+              total_extra_payment
+              borrower {
+                user_id
+                full_name
+                email
+              }
+              books {
+                loan_detail_id
+                book_id
+                title
+                author
+                image_url
+                quantity
+                borrow_days
+                due_date
+                return_date
+                status
+                deposit_amount
+                rental_fee
+                fine_amount
+                lost_quantity
+                lost_fee
+                deposit_refund_amount
+                extra_payment_amount
+              }
+            }
+          }
+        }
+      `, {
+        query: {
+          user_id: parseInt(user.id),
+          pageSize: 100
+        }
+      });
+      setLoans((res.loans?.items || []).map(mapLoan));
     } catch { setLoans([]); }
     setLoading(false);
   }, [user.id]);
 
   useEffect(() => { fetchLoans(); }, [fetchLoans]);
 
-  const activeLoans = useMemo(() => loans.filter((l: any) => l.status !== 'RETURNED'), [loans]);
-  const completedLoans = useMemo(() => loans.filter((l: any) => l.status === 'RETURNED'), [loans]);
+  const activeLoans = useMemo(() => loans.filter((l: any) => l.status !== 'COMPLETED'), [loans]);
+  const completedLoans = useMemo(() => loans.filter((l: any) => l.status === 'COMPLETED'), [loans]);
 
-  const handleReturn = async (loanId: string) => {
+  const handleCancel = async (loanId: string, reason: string) => {
     try {
-      await api(`/loans/${loanId}/status`, {
-        method: 'PATCH',
-        body: JSON.stringify({ status: 'PENDING' }),
-      });
-      showToast('Yêu cầu trả sách đã được gửi, chờ xác nhận!', 'success');
-      setReturnModal(null);
+      await graphqlQuery(`
+        mutation CancelLoan($id: ID!, $reason: String!) {
+          cancelLoan(id: $id, reason: $reason)
+        }
+      `, { id: loanId, reason });
+      showToast('Đã hủy yêu cầu mượn thành công!', 'success');
       fetchLoans();
-    } catch (e: any) { showToast(e.message || 'Lỗi khi yêu cầu trả sách', 'error'); }
+    } catch (e: any) { showToast(e.message || 'Lỗi khi hủy yêu cầu mượn', 'error'); }
   };
 
   return (
@@ -54,7 +100,7 @@ export default function LoansSection({ user }: any) {
         loans={activeLoans}
         loading={loading}
         role="USER"
-        onReturn={(loan: any) => setReturnModal(loan)}
+        onReject={handleCancel}
       />
       {completedLoans.length > 0 && (
         <div style={{ marginTop: '40px' }}>
@@ -63,7 +109,6 @@ export default function LoansSection({ user }: any) {
         </div>
       )}
 
-      <ReturnModal open={!!returnModal} loan={returnModal} onConfirm={(id: string) => handleReturn(id)} onCancel={() => setReturnModal(null)} loading={false} isAdmin={false} confirmText="Xác Nhận Trả Sách" />
       <Toast message={toast?.text || ''} type={toast?.type || 'success'} />
     </div>
   );
