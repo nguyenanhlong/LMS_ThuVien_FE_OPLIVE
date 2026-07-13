@@ -32,7 +32,7 @@ export default function DashboardSection() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  const activeLoans = loans.filter((l: any) => l.status !== 'RETURNED');
+  const activeLoans = loans.filter((l: any) => !['COMPLETED', 'CANCELLED'].includes(l.status));
   const pendingLoans = loans.filter((l: any) => l.status === 'PENDING');
 
   if (loading && !books.length) return <div className="empty-state"><p>Đang tải dữ liệu...</p></div>;

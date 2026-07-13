@@ -3,12 +3,12 @@
 const allNavItems = [
   {
     label: 'Tổng Quan', path: '/dashboard',
-    roles: ['MANAGER'],
+    roles: ['MANAGER', 'ADMIN'],
     icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>,
   },
   {
     label: 'Sách', path: '/books',
-    roles: ['USER', 'MANAGER'],
+    roles: ['USER', 'MANAGER', 'ADMIN'],
     icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>,
   },
   {
@@ -18,11 +18,10 @@ const allNavItems = [
   },
   {
     label: 'Mượn Trả', path: '/loans',
-    roles: ['USER', 'MANAGER'],
+    roles: ['USER', 'MANAGER', 'ADMIN'],
     icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>,
   },
 ];
-
 export default function Sidebar({
   activePath, onNavigate, role,
 }: {

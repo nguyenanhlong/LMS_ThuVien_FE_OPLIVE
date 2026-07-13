@@ -51,11 +51,14 @@ export default function BookTable({
                     </div>
                   </td>
                   <td>{book.author}</td>
-                  <td><span className="category-tag">{book.category}</span></td>
+                  <td><span className="category-tag">{book.sub_category_name || '—'}</span></td>
                   <td>
-                    <span className={`badge ${book.status === 'AVAILABLE' ? 'badge-success' : 'badge-danger'}`}>
-                      {book.status === 'AVAILABLE' ? 'Sẵn sàng' : 'Đã mượn'}
+                    <span className={`badge ${book.available_quantity > 0 ? 'badge-success' : 'badge-danger'}`}>
+                      {book.available_quantity > 0 ? `Còn ${book.available_quantity}/${book.total_quantity}` : 'Hết sách'}
                     </span>
+                    {!book.is_active && (
+                      <span className="badge badge-danger" style={{ marginLeft: 6 }}>Ngừng cho mượn</span>
+                    )}
                   </td>
                   <td>
                     <div style={{ display: 'flex', gap: '8px' }}>

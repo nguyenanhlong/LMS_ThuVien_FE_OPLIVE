@@ -1,17 +1,24 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { api } from '@/lib/api';
+import {
+  getLoansApi, getLoanByIdApi,
+  confirmLoanApi, borrowingLoanApi, returnLoanDetailApi, cancelLoanApi,
+} from '@/lib/api';
 import { mapLoan } from '@/utils/mappers';
-import LoanTable from '@/components/loans/LoanTable';
+import LoanTable, { LOAN_STATUS_MAP } from '@/components/loans/LoanTable';
 import LoanHistory from '@/components/loans/LoanHistory';
 import ReturnModal from '@/components/loans/ReturnModal';
 import Toast from '@/components/ui/Toast';
 
+const FILTERS = ['ALL', 'PENDING', 'PENDING_PAYMENT', 'BORROWING', 'OVERDUE', 'COMPLETED', 'CANCELLED'];
+
 export default function LoansSection() {
   const [loans, setLoans] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [returnModal, setReturnModal] = useState<any>(null);
+  const [filter, setFilter] = useState('ALL');
   const [toast, setToast] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
   const showToast = useCallback((text: string, type: 'success' | 'error' = 'success') => {
@@ -22,7 +29,7 @@ export default function LoansSection() {
   const fetchLoans = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await api<any>('/loans?pageSize=100');
+      const data = await getLoansApi({ pageSize: 100 });
       setLoans((data.items || []).map(mapLoan));
     } catch { setLoans([]); }
     setLoading(false);
@@ -30,68 +37,125 @@ export default function LoansSection() {
 
   useEffect(() => { fetchLoans(); }, [fetchLoans]);
 
-  const activeLoans = useMemo(() => loans.filter((l: any) => l.status !== 'RETURNED'), [loans]);
-  const completedLoans = useMemo(() => loans.filter((l: any) => l.status === 'RETURNED'), [loans]);
-  const pendingLoans = useMemo(() => loans.filter((l: any) => l.status === 'PENDING'), [loans]);
+  const overdueLoans = useMemo(() => loans.filter((l) => l.status === 'OVERDUE'), [loans]);
+  const doneLoans = useMemo(
+    () => loans.filter((l) => l.status === 'COMPLETED' || l.status === 'CANCELLED'),
+    [loans]
+  );
+  const workingLoans = useMemo(
+    () => loans.filter((l) => !['COMPLETED', 'CANCELLED', 'OVERDUE'].includes(l.status)),
+    [loans]
+  );
 
-  const handleApprove = async (requestId: string) => {
-    showToast('Phiếu mượn đã được tạo tự động', 'success');
+  const displayed = useMemo(() => {
+    if (filter === 'ALL') return workingLoans;
+    return loans.filter((l) => l.status === filter);
+  }, [filter, loans, workingLoans]);
+
+  const handleConfirm = async (id: string) => {
+    setSubmitting(true);
+    try {
+      await confirmLoanApi(id);
+      showToast('Đã xác nhận yêu cầu mượn — chờ độc giả thanh toán!', 'success');
+      fetchLoans();
+    } catch (e: any) { showToast(e.message || 'Lỗi khi xác nhận', 'error'); }
+    setSubmitting(false);
   };
 
-  const handleReject = async (requestId: string) => {
+  const handleBorrowing = async (id: string) => {
+    setSubmitting(true);
     try {
-      await api(`/loans/${requestId}/status`, {
-        method: 'PATCH',
-        body: JSON.stringify({ status: 'CANCELLED' }),
-      });
+      await borrowingLoanApi(id);
+      showToast('Đã giao sách cho độc giả!', 'success');
+      fetchLoans();
+    } catch (e: any) { showToast(e.message || 'Lỗi khi giao sách', 'error'); }
+    setSubmitting(false);
+  };
+
+  const handleCancel = async (id: string) => {
+    const reason = window.prompt('Lý do hủy phiếu mượn:');
+    if (!reason) return;
+    setSubmitting(true);
+    try {
+      await cancelLoanApi(id, reason);
       showToast('Đã hủy phiếu mượn!', 'success');
       fetchLoans();
-    } catch { showToast('Lỗi khi hủy', 'error'); }
+    } catch (e: any) { showToast(e.message || 'Lỗi khi hủy', 'error'); }
+    setSubmitting(false);
   };
 
-  const handleReturn = async (loanId: string) => {
+  const openReturnModal = async (loan: any) => {
     try {
-      await api(`/loans/${loanId}/status`, {
-        method: 'PATCH',
-        body: JSON.stringify({ status: 'RETURNED' }),
-      });
-      showToast('Xác nhận trả sách thành công!', 'success');
-      setReturnModal(null);
+      const full = await getLoanByIdApi(loan.id);
+      setReturnModal(mapLoan(full));
+    } catch {
+      setReturnModal(loan);
+    }
+  };
+
+  const handleReturnDetail = async (detailId: string, lostQty: number) => {
+    setSubmitting(true);
+    try {
+      await returnLoanDetailApi(detailId, lostQty);
+      showToast('Đã thu hồi sách thành công!', 'success');
+      const updated = await getLoanByIdApi(returnModal.id);
+      const mapped = mapLoan(updated);
+      const stillPending = mapped.details.some((d: any) => d.status !== 'RETURNED' && d.status !== 'CANCELLED');
+      setReturnModal(stillPending ? mapped : null);
       fetchLoans();
     } catch (e: any) { showToast(e.message || 'Lỗi khi trả sách', 'error'); }
+    setSubmitting(false);
   };
 
   return (
     <div>
-      {pendingLoans.length > 0 && (
-        <div style={{ marginBottom: '24px' }}>
-          <h2 className="section-title" style={{ color: 'var(--primary)' }}>Yêu Cầu Trả Sách Đang Chờ</h2>
-          <LoanTable
-            loans={pendingLoans} loading={loading}
-            role="MANAGER"
-            onReturn={(loan: any) => setReturnModal(loan)}
-          />
-        </div>
-      )}
-      <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', flexWrap: 'wrap' }}>
-        <h2 className="section-title" style={{ marginBottom: 0 }}>Danh Sách Mượn Trả</h2>
-      </div>
-      <LoanTable
-        loans={activeLoans.filter((l: any) => l.status !== 'PENDING')}
-        loading={loading}
-        role="MANAGER"
-        onApprove={handleApprove}
-        onReject={handleReject}
-        onReturn={(loan: any) => setReturnModal(loan)}
-      />
-      {completedLoans.length > 0 && (
-        <div style={{ marginTop: '40px' }}>
-          <h2 className="section-title">Lịch Sử Mượn Trả</h2>
-          <LoanHistory loans={completedLoans} loading={loading} />
+      {overdueLoans.length > 0 && (
+        <div style={{
+          marginBottom: 24, padding: 16, borderRadius: 12,
+          background: 'rgba(239,68,68,0.08)', border: '1px solid var(--error)',
+        }}>
+          <h2 className="section-title" style={{ color: 'var(--error)', marginBottom: 12 }}>
+            ⚠ Có {overdueLoans.length} phiếu mượn QUÁ HẠN cần xử lý gấp
+          </h2>
+          <LoanTable loans={overdueLoans} loading={loading} role="MANAGER" onReturn={openReturnModal} />
         </div>
       )}
 
-      <ReturnModal open={!!returnModal} loan={returnModal} onConfirm={(id: string) => handleReturn(id)} onCancel={() => setReturnModal(null)} loading={false} isAdmin={true} confirmText="Xác Nhận Thu Hồi" />
+      <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
+        {FILTERS.map((s) => (
+          <button
+            key={s}
+            onClick={() => setFilter(s)}
+            className={`category-pill ${filter === s ? 'active' : ''}`}
+          >
+            {s === 'ALL' ? 'Đang xử lý' : LOAN_STATUS_MAP[s]?.label || s}
+          </button>
+        ))}
+      </div>
+
+      <h2 className="section-title">Danh Sách Phiếu Mượn</h2>
+      <LoanTable
+        loans={displayed} loading={loading} role="MANAGER"
+        onConfirm={handleConfirm}
+        onBorrowing={handleBorrowing}
+        onCancel={handleCancel}
+        onReturn={openReturnModal}
+      />
+
+      {doneLoans.length > 0 && filter === 'ALL' && (
+        <div style={{ marginTop: 40 }}>
+          <h2 className="section-title">Lịch Sử Mượn Trả</h2>
+          <LoanHistory loans={doneLoans} loading={loading} />
+        </div>
+      )}
+
+      <ReturnModal
+        open={!!returnModal}
+        loan={returnModal}
+        onReturnDetail={handleReturnDetail}
+        onCancel={() => setReturnModal(null)}
+        loading={submitting}
+      />
       <Toast message={toast?.text || ''} type={toast?.type || 'success'} />
     </div>
   );

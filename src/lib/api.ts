@@ -96,3 +96,67 @@ export async function registerApi(data: { username: string; full_name: string; e
 }
 
 export { getToken, clearTokens };
+
+export async function getLoansApi(params?: { status?: string; pageSize?: number }) {
+  const qs = new URLSearchParams();
+  if (params?.status) qs.append('status', params.status);
+  qs.append('pageSize', String(params?.pageSize ?? 100));
+  return api<any>(`/loans?${qs.toString()}`);
+}
+
+export async function getLoanByIdApi(id: string | number) {
+  return api<any>(`/loans/${id}`);
+}
+
+export async function confirmLoanApi(id: string | number) {
+  return api(`/loans/${id}/status-to-confirm`, { method: 'PATCH' });
+}
+
+export async function borrowingLoanApi(id: string | number) {
+  return api(`/loans/${id}/status-to-borrowing`, { method: 'PATCH' });
+}
+
+export async function returnLoanDetailApi(detailId: string | number, lost_quantity = 0) {
+  return api(`/loans/details/${detailId}/status-to-returned`, {
+    method: 'PATCH',
+    body: JSON.stringify({ lost_quantity }),
+  });
+}
+
+export async function cancelLoanApi(id: string | number, cancelled_reason: string) {
+  return api(`/loans/${id}/cancel`, {
+    method: 'PATCH',
+    body: JSON.stringify({ cancelled_reason }),
+  });
+}
+
+export async function getBooksApi(params?: { keyword?: string; sub_category_id?: number; author?: string; is_active?: boolean; pageSize?: number }) {
+  const qs = new URLSearchParams();
+  if (params?.keyword) qs.append('keyword', params.keyword);
+  if (params?.sub_category_id) qs.append('sub_category_id', String(params.sub_category_id));
+  if (params?.author) qs.append('author', params.author);
+  if (params?.is_active !== undefined) qs.append('is_active', String(params.is_active));
+  qs.append('pageSize', String(params?.pageSize ?? 100));
+  return api<any>(`/books?${qs.toString()}`);
+}
+
+export async function createBookApi(data: any) {
+  return api('/books', { method: 'POST', body: JSON.stringify(data) });
+}
+
+export async function updateBookApi(id: string | number, data: any) {
+  return api(`/books/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+}
+
+export async function deleteBookApi(id: string | number) {
+  return api(`/books/${id}`, { method: 'DELETE' });
+}
+
+export async function getCategoriesApi() {
+  return api<any[]>('/categories');
+}
+
+export async function getSubCategoriesApi(category_id?: number) {
+  const qs = category_id ? `?category_id=${category_id}` : '';
+  return api<any[]>(`/sub-categories${qs}`);
+}
