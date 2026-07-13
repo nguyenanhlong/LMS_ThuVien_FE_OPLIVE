@@ -3,6 +3,7 @@
 import React, { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
+import { resolveImageUrl } from '@/utils/mappers';
 import BookDetail from '@/components/books/BookDetail';
 import { ArrowLeftIcon } from '@/components/ui/icons';
 
@@ -26,6 +27,7 @@ export default function BookDetailPage({ params }: { params: Promise<{ id: strin
           author: b.author || '',
           category: b.publisher || 'Khác',
           description: b.description || '',
+          image_url: resolveImageUrl(b.image_url),
           isbn: b.isbn || '',
           publisher: b.publisher || '',
           totalQuantity: b.total_quantity || 0,
@@ -43,7 +45,13 @@ export default function BookDetailPage({ params }: { params: Promise<{ id: strin
     <>
       <header className="header">
         <div className="container header-inner">
-          <div className="logo">THƯ VIỆN <span className="gradient-text">SỐ</span></div>
+          <div className="brand">
+            <span className="brand-icon">📖</span>
+            <div className="brand-text">
+              <span className="brand-title">THƯ VIỆN <span className="gradient-text">SỐ</span></span>
+              <span className="brand-subtitle">Thư viện đọc sách trực tuyến</span>
+            </div>
+          </div>
           <button onClick={() => router.back()} className="btn btn-secondary" style={{ cursor: 'pointer' }}>
             <ArrowLeftIcon /> Quay lại
           </button>

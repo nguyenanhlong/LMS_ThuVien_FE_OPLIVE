@@ -1,4 +1,4 @@
-const API_BASE = 'http://localhost:3000';
+export const API_BASE = 'http://localhost:3000';
 
 function getToken() {
   if (typeof window === 'undefined') return null;
@@ -27,7 +27,7 @@ async function refreshAccessToken() {
     const res = await fetch(`${API_BASE}/auths/refresh`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refreshToken: refresh }),
+      body: JSON.stringify({ refresh_token: refresh }),
     });
     if (!res.ok) { clearTokens(); return null; }
     const json = await res.json();

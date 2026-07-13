@@ -1,17 +1,16 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { api } from '@/lib/api';
-import { mapLoan } from '@/utils/mappers';
-import LoanTable from '@/components/loans/LoanTable';
-import LoanHistory from '@/components/loans/LoanHistory';
-import ReturnModal from '@/components/loans/ReturnModal';
+import { mapMemberLoan } from '@/utils/mappers';
+import { LoanStatusBadge, LoanDetailStatusBadge, canCancelLoan } from '@/components/loans/LoanStatusBadge';
+import CancelLoanModal from '@/components/loans/CancelLoanModal';
 import Toast from '@/components/ui/Toast';
 
 export default function LoansSection({ user }: any) {
   const [loans, setLoans] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [returnModal, setReturnModal] = useState<any>(null);
+  const [cancelModal, setCancelModal] = useState<any>(null);
   const [toast, setToast] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
   const showToast = useCallback((text: string, type: 'success' | 'error' = 'success') => {
@@ -23,47 +22,92 @@ export default function LoansSection({ user }: any) {
     setLoading(true);
     try {
       const data = await api<any>(`/loans?pageSize=100&user_id=${user.id}`);
-      setLoans((data.items || []).map(mapLoan));
-    } catch { setLoans([]); }
+      setLoans((data.items || []).map(mapMemberLoan));
+    } catch {
+      setLoans([]);
+      showToast('Không tải được danh sách phiếu mượn', 'error');
+    }
     setLoading(false);
-  }, [user.id]);
+  }, [user.id, showToast]);
 
   useEffect(() => { fetchLoans(); }, [fetchLoans]);
 
-  const activeLoans = useMemo(() => loans.filter((l: any) => l.status !== 'RETURNED'), [loans]);
-  const completedLoans = useMemo(() => loans.filter((l: any) => l.status === 'RETURNED'), [loans]);
-
-  const handleReturn = async (loanId: string) => {
+  const handleCancel = async (reason: string) => {
+    if (!cancelModal) return;
     try {
-      await api(`/loans/${loanId}/status`, {
+      await api(`/loans/${cancelModal.id}/cancel`, {
         method: 'PATCH',
-        body: JSON.stringify({ status: 'PENDING' }),
+        body: JSON.stringify({ cancelled_reason: reason }),
       });
-      showToast('Yêu cầu trả sách đã được gửi, chờ xác nhận!', 'success');
-      setReturnModal(null);
+      showToast('Đã hủy phiếu mượn', 'success');
+      setCancelModal(null);
       fetchLoans();
-    } catch (e: any) { showToast(e.message || 'Lỗi khi yêu cầu trả sách', 'error'); }
+    } catch (err: any) {
+      showToast(err.message || 'Lỗi khi hủy phiếu mượn', 'error');
+    }
   };
 
   return (
     <div>
-      <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', flexWrap: 'wrap' }}>
-        <h2 className="section-title" style={{ marginBottom: 0 }}>Phiếu Mượn Của Tôi</h2>
-      </div>
-      <LoanTable
-        loans={activeLoans}
-        loading={loading}
-        role="USER"
-        onReturn={(loan: any) => setReturnModal(loan)}
-      />
-      {completedLoans.length > 0 && (
-        <div style={{ marginTop: '40px' }}>
-          <h2 className="section-title">Lịch Sử Mượn Trả</h2>
-          <LoanHistory loans={completedLoans} loading={loading} />
+      <h2 className="section-title">Phiếu Mượn Của Tôi</h2>
+
+      {loading ? (
+        <p style={{ color: 'var(--text-muted)' }}>Đang tải...</p>
+      ) : !loans.length ? (
+        <div className="empty-state"><p>Bạn chưa có phiếu mượn nào</p></div>
+      ) : (
+        <div className="loan-card-list">
+          {loans.map((loan) => (
+            <div key={loan.id} className="loan-card glass-panel">
+              <div className="loan-card-header">
+                <div>
+                  <span className="loan-card-id">Phiếu #{loan.id}</span>
+                  {loan.loanDate && <span className="loan-card-date"> · {loan.loanDate}</span>}
+                </div>
+                <LoanStatusBadge status={loan.status} />
+              </div>
+
+              <div className="loan-card-books">
+                {loan.books.map((bk: any) => (
+                  <div key={bk.loanDetailId} className="loan-book-row">
+                    <div className="loan-book-info">
+                      <span className="loan-book-title">{bk.title}</span>
+                      <span className="loan-book-meta">
+                        SL: {bk.quantity} · {bk.borrowDays} ngày
+                        {bk.dueDate && ` · Hạn trả: ${bk.dueDate}`}
+                        {bk.returnDate && ` · Đã trả: ${bk.returnDate}`}
+                      </span>
+                    </div>
+                    <LoanDetailStatusBadge status={bk.status} />
+                  </div>
+                ))}
+              </div>
+
+              {(loan.totalDeposit > 0 || loan.totalRentalFee > 0) && (
+                <div className="loan-card-fees">
+                  <span>Đặt cọc: <strong>{loan.totalDeposit.toLocaleString('vi-VN')}đ</strong></span>
+                  <span>Phí thuê: <strong>{loan.totalRentalFee.toLocaleString('vi-VN')}đ</strong></span>
+                  {loan.totalFine > 0 && <span>Phạt trễ hạn: <strong>{loan.totalFine.toLocaleString('vi-VN')}đ</strong></span>}
+                </div>
+              )}
+
+              {loan.cancelledReason && (
+                <p className="loan-card-cancel-reason">Lý do hủy: {loan.cancelledReason}</p>
+              )}
+
+              {canCancelLoan(loan.status) && (
+                <div className="loan-card-actions">
+                  <button onClick={() => setCancelModal(loan)} className="btn btn-danger" style={{ padding: '6px 14px', fontSize: '0.8125rem' }}>
+                    Hủy Phiếu
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
         </div>
       )}
 
-      <ReturnModal open={!!returnModal} loan={returnModal} onConfirm={(id: string) => handleReturn(id)} onCancel={() => setReturnModal(null)} loading={false} isAdmin={false} confirmText="Xác Nhận Trả Sách" />
+      <CancelLoanModal loan={cancelModal} onClose={() => setCancelModal(null)} onConfirm={handleCancel} />
       <Toast message={toast?.text || ''} type={toast?.type || 'success'} />
     </div>
   );

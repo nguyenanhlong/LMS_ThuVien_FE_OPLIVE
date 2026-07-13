@@ -5,15 +5,12 @@ import { api } from '@/lib/api';
 import { mapBook } from '@/utils/mappers';
 import BookCard from '@/components/books/BookCard';
 import BorrowModal from '@/components/books/BorrowModal';
+import RecommendedBooks from '@/components/books/RecommendedBooks';
 import Toast from '@/components/ui/Toast';
 
-const categories = ['Tất cả', 'Kỹ năng sống', 'Tiểu thuyết', 'Khoa học', 'Tài chính'];
-
-export default function BooksSection({ user, onLoanCreated }: any) {
+export default function BooksSection({ user, searchTerm, selectedCategory, onLoanCreated }: any) {
   const [books, setBooks] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('Tất cả');
   const [borrowModal, setBorrowModal] = useState<any>(null);
   const [toast, setToast] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
@@ -38,18 +35,17 @@ export default function BooksSection({ user, onLoanCreated }: any) {
     return books.filter((b: any) => b.category === selectedCategory);
   }, [books, selectedCategory]);
 
-  const handleBorrow = async (readerName: string, readerId: string) => {
+  const handleBorrow = async (quantity: number, borrowDays: number) => {
     if (!borrowModal) return;
     try {
       await api('/loans', {
         method: 'POST',
         body: JSON.stringify({
-          user_id: parseInt(readerId),
-          due_date: new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0],
-          items: [{ book_id: parseInt(borrowModal.id), quantity: 1 }],
+          user_id: user.id,
+          items: [{ book_id: parseInt(borrowModal.id), quantity, borrow_days: borrowDays }],
         }),
       });
-      showToast('Tạo phiếu mượn thành công!', 'success');
+      showToast('Gửi yêu cầu mượn thành công! Chờ thủ thư xác nhận.', 'success');
       setBorrowModal(null);
       fetchBooks();
       if (onLoanCreated) onLoanCreated();
@@ -58,14 +54,7 @@ export default function BooksSection({ user, onLoanCreated }: any) {
 
   return (
     <div>
-      <div style={{ display: 'flex', gap: '16px', marginBottom: '24px', flexWrap: 'wrap', alignItems: 'center' }}>
-        <input className="form-control" style={{ maxWidth: '360px', background: 'var(--bg-secondary)' }} placeholder="Tìm kiếm sách..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          {categories.map((c) => (
-            <button key={c} onClick={() => setSelectedCategory(c)} className={`category-pill ${selectedCategory === c ? 'active' : ''}`}>{c}</button>
-          ))}
-        </div>
-      </div>
+      <RecommendedBooks />
 
       {loading ? (
         <div className="loading-grid">{[1, 2, 3, 4, 5, 6].map((i) => <div key={i} className="book-card-skeleton" />)}</div>
