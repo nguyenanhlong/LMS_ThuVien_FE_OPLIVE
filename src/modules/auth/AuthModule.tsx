@@ -12,7 +12,7 @@ export default function AuthModule() {
   const [loginUser, setLoginUser] = useState('');
   const [loginPass, setLoginPass] = useState('');
 
-  const [regData, setRegData] = useState({ username: '', full_name: '', email: '', password: '', role: 'MEMBER' });
+  const [regData, setRegData] = useState({ username: '', full_name: '', email: '', password: '' });
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -96,13 +96,7 @@ export default function AuthModule() {
               <label>Mật khẩu</label>
               <input className="form-control" type="password" placeholder="Ít nhất 8 ký tự, có chữ hoa, chữ thường, số và ký tự đặc biệt" value={regData.password} onChange={(e) => setRegData({ ...regData, password: e.target.value })} />
             </div>
-            <div className="form-group">
-              <label>Vai trò</label>
-              <select className="form-control" value={regData.role} onChange={(e) => setRegData({ ...regData, role: e.target.value })} style={{ background: 'var(--bg-tertiary)' }}>
-                <option value="MEMBER">Độc giả</option>
-                <option value="LIBRARIAN">Thủ thư</option>
-              </select>
-            </div>
+
             <button type="submit" className="btn btn-primary btn-full" disabled={submitting} style={{ marginTop: '8px' }}>
               {submitting ? 'Đang đăng ký...' : 'Đăng Ký'}
             </button>

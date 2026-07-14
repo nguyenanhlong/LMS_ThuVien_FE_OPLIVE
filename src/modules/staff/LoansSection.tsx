@@ -1,56 +1,24 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { graphqlQuery } from '@/lib/api';
+import {
+  getLoansApi, getLoanByIdApi,
+  confirmLoanApi, borrowingLoanApi, returnLoanDetailApi, cancelLoanApi,
+} from '@/lib/api';
 import { mapLoan } from '@/utils/mappers';
-import LoanTable from '@/components/loans/LoanTable';
+import LoanTable, { LOAN_STATUS_MAP } from '@/components/loans/LoanTable';
 import LoanHistory from '@/components/loans/LoanHistory';
 import ReturnModal from '@/components/loans/ReturnModal';
 import Toast from '@/components/ui/Toast';
 
-const LOAN_FRAGMENT = `
-  id
-  loan_date
-  status
-  cancelled_reason
-  total_deposit
-  total_rental_fee
-  total_amount
-  total_fine
-  total_lost_fee
-  total_initial_payment
-  total_deposit_refund
-  total_extra_payment
-  borrower {
-    user_id
-    full_name
-    email
-  }
-  books {
-    loan_detail_id
-    book_id
-    title
-    author
-    image_url
-    quantity
-    borrow_days
-    due_date
-    return_date
-    status
-    deposit_amount
-    rental_fee
-    fine_amount
-    lost_quantity
-    lost_fee
-    deposit_refund_amount
-    extra_payment_amount
-  }
-`;
+const FILTERS = ['ALL', 'PENDING', 'PENDING_PAYMENT', 'BORROWING', 'OVERDUE', 'COMPLETED', 'CANCELLED'];
 
 export default function LoansSection() {
   const [loans, setLoans] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [returnModal, setReturnModal] = useState<any>(null);
+  const [filter, setFilter] = useState('ALL');
   const [toast, setToast] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
   const showToast = useCallback((text: string, type: 'success' | 'error' = 'success') => {
@@ -61,143 +29,133 @@ export default function LoansSection() {
   const fetchLoans = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await graphqlQuery(`
-        query GetLoans($query: GetLoansInput) {
-          loans(query: $query) {
-            items {
-              ${LOAN_FRAGMENT}
-            }
-          }
-        }
-      `, { query: { pageSize: 100 } });
-      setLoans((res.loans?.items || []).map(mapLoan));
+      const data = await getLoansApi({ pageSize: 100 });
+      setLoans((data.items || []).map(mapLoan));
     } catch { setLoans([]); }
     setLoading(false);
   }, []);
 
   useEffect(() => { fetchLoans(); }, [fetchLoans]);
 
-  const activeLoans = useMemo(() => loans.filter((l: any) => l.status !== 'COMPLETED' && l.status !== 'CANCELLED'), [loans]);
-  const completedLoans = useMemo(() => loans.filter((l: any) => l.status === 'COMPLETED' || l.status === 'CANCELLED'), [loans]);
-  const pendingLoans = useMemo(() => loans.filter((l: any) => l.status === 'PENDING'), [loans]);
+  const overdueLoans = useMemo(() => loans.filter((l) => l.status === 'OVERDUE'), [loans]);
+  const doneLoans = useMemo(
+    () => loans.filter((l) => l.status === 'COMPLETED' || l.status === 'CANCELLED'),
+    [loans]
+  );
+  const workingLoans = useMemo(
+    () => loans.filter((l) => !['COMPLETED', 'CANCELLED', 'OVERDUE'].includes(l.status)),
+    [loans]
+  );
 
-  // PENDING → PENDING_PAYMENT (staff confirms the loan info)
-  const handleConfirmLoan = async (loanId: string) => {
+  const displayed = useMemo(() => {
+    if (filter === 'ALL') return workingLoans;
+    return loans.filter((l) => l.status === filter);
+  }, [filter, loans, workingLoans]);
+
+  const handleConfirm = async (id: string) => {
+    setSubmitting(true);
     try {
-      await graphqlQuery(`
-        mutation ConfirmLoan($id: ID!) {
-          confirmLoan(id: $id)
-        }
-      `, { id: loanId });
-      showToast('Đã xác nhận phiếu mượn, chờ độc giả thanh toán!', 'success');
+      await confirmLoanApi(id);
+      showToast('Đã xác nhận yêu cầu mượn — chờ độc giả thanh toán!', 'success');
       fetchLoans();
-    } catch (e: any) { showToast(e.message || 'Lỗi khi xác nhận phiếu mượn', 'error'); }
+    } catch (e: any) { showToast(e.message || 'Lỗi khi xác nhận', 'error'); }
+    setSubmitting(false);
   };
 
-  // PENDING_PAYMENT → BORROWING (customer paid, books handed out)
-  const handlePayAndBorrow = async (loanId: string) => {
+  const handleBorrowing = async (id: string) => {
+    setSubmitting(true);
     try {
-      await graphqlQuery(`
-        mutation PayAndBorrow($id: ID!) {
-          payAndBorrow(id: $id)
-        }
-      `, { id: loanId });
-      showToast('Xác nhận thanh toán & giao sách thành công!', 'success');
+      await borrowingLoanApi(id);
+      showToast('Đã giao sách cho độc giả!', 'success');
       fetchLoans();
-    } catch (e: any) { showToast(e.message || 'Lỗi khi xác nhận mượn sách', 'error'); }
+    } catch (e: any) { showToast(e.message || 'Lỗi khi giao sách', 'error'); }
+    setSubmitting(false);
   };
 
-  // Staff approves based on current status
-  const handleApprove = async (loanId: string) => {
-    // Find the loan to determine its current status
-    const loan = loans.find((l: any) => String(l.id) === String(loanId));
-    if (!loan) return;
-    if (loan.status === 'PENDING') {
-      await handleConfirmLoan(loanId);
-    } else if (loan.status === 'PENDING_PAYMENT') {
-      await handlePayAndBorrow(loanId);
+  const handleCancel = async (id: string) => {
+    const reason = window.prompt('Lý do hủy phiếu mượn:');
+    if (!reason) return;
+    setSubmitting(true);
+    try {
+      await cancelLoanApi(id, reason);
+      showToast('Đã hủy phiếu mượn!', 'success');
+      fetchLoans();
+    } catch (e: any) { showToast(e.message || 'Lỗi khi hủy', 'error'); }
+    setSubmitting(false);
+  };
+
+  const openReturnModal = async (loan: any) => {
+    try {
+      const full = await getLoanByIdApi(loan.id);
+      setReturnModal(mapLoan(full));
+    } catch {
+      setReturnModal(loan);
     }
   };
 
-  const handleCancel = async (loanId: string, reason: string) => {
+  const handleReturnDetail = async (detailId: string, lostQty: number) => {
+    setSubmitting(true);
     try {
-      await graphqlQuery(`
-        mutation CancelLoan($id: ID!, $reason: String!) {
-          cancelLoan(id: $id, reason: $reason)
-        }
-      `, { id: loanId, reason });
-      showToast('Đã hủy phiếu mượn!', 'success');
+      await returnLoanDetailApi(detailId, lostQty);
+      showToast('Đã thu hồi sách thành công!', 'success');
+      const updated = await getLoanByIdApi(returnModal.id);
+      const mapped = mapLoan(updated);
+      const stillPending = mapped.details.some((d: any) => d.status !== 'RETURNED' && d.status !== 'CANCELLED');
+      setReturnModal(stillPending ? mapped : null);
       fetchLoans();
-    } catch (e: any) { showToast(e.message || 'Lỗi khi hủy phiếu mượn', 'error'); }
-  };
-
-  // BORROWING → RETURNED for a specific loan_detail
-  const handleReturn = async (loanId: string) => {
-    const loan = loans.find((l: any) => String(l.id) === String(loanId));
-    if (!loan) return;
-    try {
-      // Return each book detail that is still borrowing/overdue
-      const rawLoan = loan._raw;
-      if (rawLoan?.books) {
-        for (const book of rawLoan.books) {
-          if (book.status === 'BORROWING' || book.status === 'OVERDUE') {
-            await graphqlQuery(`
-              mutation ReturnLoanDetail($detailId: ID!, $lostQuantity: Int) {
-                returnLoanDetail(detailId: $detailId, lostQuantity: $lostQuantity)
-              }
-            `, { detailId: book.loan_detail_id, lostQuantity: 0 });
-          }
-        }
-      } else {
-        // Fallback: try getting from returnModal which stores raw data
-        const detail = returnModal?.books?.[0];
-        if (detail) {
-          await graphqlQuery(`
-            mutation ReturnLoanDetail($detailId: ID!, $lostQuantity: Int) {
-              returnLoanDetail(detailId: $detailId, lostQuantity: $lostQuantity)
-            }
-          `, { detailId: detail.loan_detail_id, lostQuantity: 0 });
-        }
-      }
-      showToast('Xác nhận trả sách thành công!', 'success');
-      setReturnModal(null);
-      fetchLoans();
-    } catch (e: any) { showToast(e.message || 'Lỗi khi xác nhận trả sách', 'error'); }
+    } catch (e: any) { showToast(e.message || 'Lỗi khi trả sách', 'error'); }
+    setSubmitting(false);
   };
 
   return (
     <div>
-      {pendingLoans.length > 0 && (
-        <div style={{ marginBottom: '24px' }}>
-          <h2 className="section-title" style={{ color: 'var(--primary)' }}>Phiếu Mượn Đang Chờ Duyệt</h2>
-          <LoanTable
-            loans={pendingLoans} loading={loading}
-            role="MANAGER"
-            onApprove={handleApprove}
-            onReject={handleCancel}
-            onReturn={(loan: any) => setReturnModal(loan)}
-          />
-        </div>
-      )}
-      <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', flexWrap: 'wrap' }}>
-        <h2 className="section-title" style={{ marginBottom: 0 }}>Danh Sách Mượn Trả</h2>
-      </div>
-      <LoanTable
-        loans={activeLoans.filter((l: any) => l.status !== 'PENDING')}
-        loading={loading}
-        role="MANAGER"
-        onApprove={handleApprove}
-        onReject={handleCancel}
-        onReturn={(loan: any) => setReturnModal(loan)}
-      />
-      {completedLoans.length > 0 && (
-        <div style={{ marginTop: '40px' }}>
-          <h2 className="section-title">Lịch Sử Mượn Trả</h2>
-          <LoanHistory loans={completedLoans} loading={loading} />
+      {overdueLoans.length > 0 && (
+        <div style={{
+          marginBottom: 24, padding: 16, borderRadius: 12,
+          background: 'rgba(239,68,68,0.08)', border: '1px solid var(--error)',
+        }}>
+          <h2 className="section-title" style={{ color: 'var(--error)', marginBottom: 12 }}>
+            ⚠ Có {overdueLoans.length} phiếu mượn QUÁ HẠN cần xử lý gấp
+          </h2>
+          <LoanTable loans={overdueLoans} loading={loading} role="MANAGER" onReturn={openReturnModal} />
         </div>
       )}
 
-      <ReturnModal open={!!returnModal} loan={returnModal} onConfirm={(id: string) => handleReturn(id)} onCancel={() => setReturnModal(null)} loading={false} isAdmin={true} confirmText="Xác Nhận Thu Hồi" />
+      <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
+        {FILTERS.map((s) => (
+          <button
+            key={s}
+            onClick={() => setFilter(s)}
+            className={`category-pill ${filter === s ? 'active' : ''}`}
+          >
+            {s === 'ALL' ? 'Đang xử lý' : LOAN_STATUS_MAP[s]?.label || s}
+          </button>
+        ))}
+      </div>
+
+      <h2 className="section-title">Danh Sách Phiếu Mượn</h2>
+      <LoanTable
+        loans={displayed} loading={loading} role="MANAGER"
+        onConfirm={handleConfirm}
+        onBorrowing={handleBorrowing}
+        onCancel={handleCancel}
+        onReturn={openReturnModal}
+      />
+
+      {doneLoans.length > 0 && filter === 'ALL' && (
+        <div style={{ marginTop: 40 }}>
+          <h2 className="section-title">Lịch Sử Mượn Trả</h2>
+          <LoanHistory loans={doneLoans} loading={loading} />
+        </div>
+      )}
+
+      <ReturnModal
+        open={!!returnModal}
+        loan={returnModal}
+        onReturnDetail={handleReturnDetail}
+        onCancel={() => setReturnModal(null)}
+        loading={submitting}
+      />
       <Toast message={toast?.text || ''} type={toast?.type || 'success'} />
     </div>
   );

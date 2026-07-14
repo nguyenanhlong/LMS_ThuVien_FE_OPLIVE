@@ -7,10 +7,10 @@ import Sidebar from '@/components/layout/Sidebar';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 
-type Section = 'dashboard' | 'books' | 'users' | 'loans';
+type Section = 'dashboard' | 'books' | 'users' | 'loans' | 'categories' | 'subcategories' | 'permissions';
 
 const sectionTitles: Record<Section, string> = {
-  dashboard: 'Tổng Quan', books: 'Quản Lý Sách', users: 'Quản Lý Độc Giả', loans: 'Quản Lý Mượn Trả',
+  dashboard: 'Tổng Quan', books: 'Quản Lý Sách', users: 'Quản Lý Độc Giả', loans: 'Quản Lý Mượn Trả', categories: 'Quản Lý Danh Mục', subcategories: 'Quản Lý Danh Mục Con', permissions: 'Phân Quyền',
 };
 
 export default function StaffLayout({ defaultSection, allowedSections, children }: any) {
@@ -20,7 +20,7 @@ export default function StaffLayout({ defaultSection, allowedSections, children 
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const handleNavigate = (path: string) => {
-    const map: Record<string, Section> = { '/dashboard': 'dashboard', '/books': 'books', '/users': 'users', '/loans': 'loans' };
+    const map: Record<string, Section> = { '/dashboard': 'dashboard', '/books': 'books', '/users': 'users', '/loans': 'loans', '/categories': 'categories', '/subcategories': 'subcategories', '/permissions': 'permissions' };
     const s = map[path] || defaultSection;
     if (allowedSections.includes(s)) { setSection(s); setSidebarOpen(false); }
   };

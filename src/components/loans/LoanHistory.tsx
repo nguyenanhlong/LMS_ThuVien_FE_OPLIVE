@@ -2,6 +2,7 @@
 
 import Table from '@/components/ui/Table';
 import Badge from '@/components/ui/Badge';
+import { LOAN_STATUS_MAP } from './LoanTable';
 
 export default function LoanHistory({ loans, loading }: {
   loans: any[];
@@ -9,10 +10,16 @@ export default function LoanHistory({ loans, loading }: {
 }) {
   const columns = [
     { key: 'memberName', label: 'Độc giả', render: (row: any) => row.userName },
-    { key: 'bookTitle', label: 'Tên sách', render: (row: any) => row.book?.title || 'Đầu sách đã bị xóa' },
+    { key: 'bookTitles', label: 'Sách', render: (row: any) => row.bookTitles },
     { key: 'requestDate', label: 'Ngày mượn' },
     { key: 'returnDate', label: 'Ngày trả', render: (row: any) => row.returnDate || '-' },
-    { key: 'status', label: 'Trạng thái', render: () => <Badge variant="muted">Đã trả</Badge> },
+    {
+      key: 'status', label: 'Trạng thái',
+      render: (row: any) => {
+        const s = LOAN_STATUS_MAP[row.status] || { label: row.status, variant: 'muted' };
+        return <Badge variant={s.variant}>{s.label}</Badge>;
+      },
+    },
   ];
 
   return <Table columns={columns} data={loans} loading={loading} emptyText="Chưa có lịch sử mượn trả" />;

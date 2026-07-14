@@ -15,7 +15,8 @@ export default function BookCard({
 
   return (
     <div className="book-card glass-panel">
-      <div className="book-cover" style={{ background: cover.gradient }}>
+      <div className="book-cover" style={{ background: book.image_url ? undefined : cover.gradient }}>
+        {book.image_url && <img src={book.image_url} alt={book.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
         <div className="book-cover-overlay" />
         <span className={`book-cover-badge ${book.status === 'AVAILABLE' ? 'badge-success' : 'badge-danger'}`}>
           {book.status === 'AVAILABLE' ? 'Sẵn sàng' : 'Đã mượn'}

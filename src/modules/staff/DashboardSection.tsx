@@ -40,6 +40,7 @@ export default function DashboardSection() {
                 loan_date
                 status
                 borrower {
+                  user_id
                   full_name
                 }
                 books {
@@ -60,19 +61,17 @@ export default function DashboardSection() {
     try {
       const userRes = await graphqlQuery(`
         query GetUsers {
-          users {
-            id
-          }
+          users { id role }
         }
       `);
-      setUsers(userRes.users || []);
+      setUsers((userRes.users || []).filter((u: any) => u.role === 'MEMBER'));
     } catch { setUsers([]); }
     setLoading(false);
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  const activeLoans = loans.filter((l: any) => l.status === 'BORROWING' || l.status === 'OVERDUE');
+  const activeLoans = loans.filter((l: any) => !['COMPLETED', 'CANCELLED'].includes(l.status));
   const pendingLoans = loans.filter((l: any) => l.status === 'PENDING');
 
   if (loading && !books.length) return <div className="empty-state"><p>Đang tải dữ liệu...</p></div>;
