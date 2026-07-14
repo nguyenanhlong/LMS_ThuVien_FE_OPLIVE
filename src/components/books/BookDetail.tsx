@@ -12,29 +12,35 @@ export default function BookDetail({ book }: any) {
     <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: '40px', alignItems: 'start' }}>
       <div>
         <div style={{
-          background: cover.gradient,
+          background: book.image_url ? undefined : cover.gradient,
           borderRadius: '16px',
           aspectRatio: '3/4',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          padding: '32px',
+          padding: book.image_url ? 0 : '32px',
           boxShadow: `0 20px 60px ${cover.accent}44`,
           position: 'relative',
           overflow: 'hidden',
         }}>
-          <div style={{
-            position: 'absolute', inset: 0,
-            background: 'rgba(0,0,0,0.15)',
-            backdropFilter: 'blur(1px)',
-          }} />
-          <div style={{ position: 'relative', zIndex: 1, textAlign: 'center' }}>
-            <BookIcon />
-            <div style={{ color: 'white', fontWeight: 800, fontSize: '1.05rem', lineHeight: 1.4, marginTop: '16px' }}>
-              {book.title}
-            </div>
-          </div>
+          {book.image_url ? (
+            <img src={book.image_url} alt={book.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          ) : (
+            <>
+              <div style={{
+                position: 'absolute', inset: 0,
+                background: 'rgba(0,0,0,0.15)',
+                backdropFilter: 'blur(1px)',
+              }} />
+              <div style={{ position: 'relative', zIndex: 1, textAlign: 'center' }}>
+                <BookIcon />
+                <div style={{ color: 'white', fontWeight: 800, fontSize: '1.05rem', lineHeight: 1.4, marginTop: '16px' }}>
+                  {book.title}
+                </div>
+              </div>
+            </>
+          )}
         </div>
         <div style={{ marginTop: '20px', textAlign: 'center' }}>
           <span

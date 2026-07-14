@@ -41,7 +41,7 @@ export default function UsersSection() {
   const handleUpdate = async (data: any) => {
     try {
       await graphqlQuery(`
-        mutation UpdateUser($id: ID!, $input: UpdateUserInput!) {
+        mutation UpdateUser($id: String!, $input: UpdateUserInput!) {
           updateUser(id: $id, input: $input) {
             id
           }
@@ -53,9 +53,11 @@ export default function UsersSection() {
           is_active: data.is_active
         }
       });
-      showToast('Cập nhật thông tin độc giả thành công!', 'success');
+      setUsers((prev) => prev.map((u) =>
+        u.id === editUser.id ? { ...u, role: data.role, is_active: data.is_active } : u
+      ));
+      showToast('Cập nhật thành công!', 'success');
       setEditUser(null);
-      fetchUsers();
     } catch (e: any) { showToast(e.message || 'Lỗi khi cập nhật', 'error'); }
   };
 

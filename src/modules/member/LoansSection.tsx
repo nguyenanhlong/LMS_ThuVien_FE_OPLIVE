@@ -1,15 +1,16 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { graphqlQuery } from '@/lib/api';
-import { mapLoan } from '@/utils/mappers';
-import LoanTable from '@/components/loans/LoanTable';
-import LoanHistory from '@/components/loans/LoanHistory';
+import { useState, useEffect, useCallback } from 'react';
+import { cancelLoanApi, getLoansApi } from '@/lib/api';
+import { mapMemberLoan } from '@/utils/mappers';
+import { LoanStatusBadge, LoanDetailStatusBadge, canCancelLoan } from '@/components/loans/LoanStatusBadge';
+import CancelLoanModal from '@/components/loans/CancelLoanModal';
 import Toast from '@/components/ui/Toast';
 
 export default function LoansSection({ user }: any) {
   const [loans, setLoans] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [cancelModal, setCancelModal] = useState<any>(null);
   const [toast, setToast] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
   const showToast = useCallback((text: string, type: 'success' | 'error' = 'success') => {
@@ -20,95 +21,90 @@ export default function LoansSection({ user }: any) {
   const fetchLoans = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await graphqlQuery(`
-        query GetLoans($query: GetLoansInput) {
-          loans(query: $query) {
-            items {
-              id
-              loan_date
-              status
-              cancelled_reason
-              total_deposit
-              total_rental_fee
-              total_amount
-              total_fine
-              total_lost_fee
-              total_initial_payment
-              total_deposit_refund
-              total_extra_payment
-              borrower {
-                user_id
-                full_name
-                email
-              }
-              books {
-                loan_detail_id
-                book_id
-                title
-                author
-                image_url
-                quantity
-                borrow_days
-                due_date
-                return_date
-                status
-                deposit_amount
-                rental_fee
-                fine_amount
-                lost_quantity
-                lost_fee
-                deposit_refund_amount
-                extra_payment_amount
-              }
-            }
-          }
-        }
-      `, {
-        query: {
-          user_id: parseInt(user.id),
-          pageSize: 100
-        }
-      });
-      setLoans((res.loans?.items || []).map(mapLoan));
-    } catch { setLoans([]); }
+      const data = await getLoansApi({ user_id: user.id, pageSize: 100 });
+      setLoans((data.items || []).map(mapMemberLoan));
+    } catch {
+      setLoans([]);
+      showToast('Không tải được danh sách phiếu mượn', 'error');
+    }
     setLoading(false);
-  }, [user.id]);
+  }, [user.id, showToast]);
 
   useEffect(() => { fetchLoans(); }, [fetchLoans]);
 
-  const activeLoans = useMemo(() => loans.filter((l: any) => l.status !== 'COMPLETED'), [loans]);
-  const completedLoans = useMemo(() => loans.filter((l: any) => l.status === 'COMPLETED'), [loans]);
-
-  const handleCancel = async (loanId: string, reason: string) => {
+  const handleCancel = async (reason: string) => {
+    if (!cancelModal) return;
     try {
-      await graphqlQuery(`
-        mutation CancelLoan($id: ID!, $reason: String!) {
-          cancelLoan(id: $id, reason: $reason)
-        }
-      `, { id: loanId, reason });
-      showToast('Đã hủy yêu cầu mượn thành công!', 'success');
+      await cancelLoanApi(cancelModal.id, reason);
+      showToast('Đã hủy phiếu mượn', 'success');
+      setCancelModal(null);
       fetchLoans();
-    } catch (e: any) { showToast(e.message || 'Lỗi khi hủy yêu cầu mượn', 'error'); }
+    } catch (err: any) {
+      showToast(err.message || 'Lỗi khi hủy phiếu mượn', 'error');
+    }
   };
 
   return (
     <div>
-      <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', flexWrap: 'wrap' }}>
-        <h2 className="section-title" style={{ marginBottom: 0 }}>Phiếu Mượn Của Tôi</h2>
-      </div>
-      <LoanTable
-        loans={activeLoans}
-        loading={loading}
-        role="USER"
-        onReject={handleCancel}
-      />
-      {completedLoans.length > 0 && (
-        <div style={{ marginTop: '40px' }}>
-          <h2 className="section-title">Lịch Sử Mượn Trả</h2>
-          <LoanHistory loans={completedLoans} loading={loading} />
+      <h2 className="section-title">Phiếu Mượn Của Tôi</h2>
+
+      {loading ? (
+        <p style={{ color: 'var(--text-muted)' }}>Đang tải...</p>
+      ) : !loans.length ? (
+        <div className="empty-state"><p>Bạn chưa có phiếu mượn nào</p></div>
+      ) : (
+        <div className="loan-card-list">
+          {loans.map((loan) => (
+            <div key={loan.id} className="loan-card glass-panel">
+              <div className="loan-card-header">
+                <div>
+                  <span className="loan-card-id">Phiếu #{loan.id}</span>
+                  {loan.loanDate && <span className="loan-card-date"> · {loan.loanDate}</span>}
+                </div>
+                <LoanStatusBadge status={loan.status} />
+              </div>
+
+              <div className="loan-card-books">
+                {loan.books.map((bk: any) => (
+                  <div key={bk.loanDetailId} className="loan-book-row">
+                    <div className="loan-book-info">
+                      <span className="loan-book-title">{bk.title}</span>
+                      <span className="loan-book-meta">
+                        SL: {bk.quantity} · {bk.borrowDays} ngày
+                        {bk.dueDate && ` · Hạn trả: ${bk.dueDate}`}
+                        {bk.returnDate && ` · Đã trả: ${bk.returnDate}`}
+                      </span>
+                    </div>
+                    <LoanDetailStatusBadge status={bk.status} />
+                  </div>
+                ))}
+              </div>
+
+              {(loan.totalDeposit > 0 || loan.totalRentalFee > 0) && (
+                <div className="loan-card-fees">
+                  <span>Đặt cọc: <strong>{loan.totalDeposit.toLocaleString('vi-VN')}đ</strong></span>
+                  <span>Phí thuê: <strong>{loan.totalRentalFee.toLocaleString('vi-VN')}đ</strong></span>
+                  {loan.totalFine > 0 && <span>Phạt trễ hạn: <strong>{loan.totalFine.toLocaleString('vi-VN')}đ</strong></span>}
+                </div>
+              )}
+
+              {loan.cancelledReason && (
+                <p className="loan-card-cancel-reason">Lý do hủy: {loan.cancelledReason}</p>
+              )}
+
+              {canCancelLoan(loan.status) && (
+                <div className="loan-card-actions">
+                  <button onClick={() => setCancelModal(loan)} className="btn btn-danger" style={{ padding: '6px 14px', fontSize: '0.8125rem' }}>
+                    Hủy Phiếu
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
         </div>
       )}
 
+      <CancelLoanModal loan={cancelModal} onClose={() => setCancelModal(null)} onConfirm={handleCancel} />
       <Toast message={toast?.text || ''} type={toast?.type || 'success'} />
     </div>
   );

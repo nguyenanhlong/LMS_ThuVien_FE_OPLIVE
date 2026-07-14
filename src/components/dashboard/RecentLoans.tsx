@@ -4,12 +4,10 @@ import Badge from '@/components/ui/Badge';
 
 function statusBadge(status: string) {
   const map: Record<string, { label: string; variant: string }> = {
-    PENDING: { label: 'Chờ duyệt', variant: 'warning' },
-    APPROVED: { label: 'Đang mượn', variant: 'success' },
-    REJECTED: { label: 'Đã từ chối', variant: 'danger' },
-    RETURNED: { label: 'Đã trả', variant: 'muted' },
-    PENDING_RETURN: { label: 'Chờ xác nhận trả', variant: 'info' },
+    PENDING: { label: 'Chờ xác nhận', variant: 'warning' },
+    PENDING_PAYMENT: { label: 'Chờ thanh toán', variant: 'warning' },
     BORROWING: { label: 'Đang mượn', variant: 'success' },
+    COMPLETED: { label: 'Đã hoàn tất', variant: 'muted' },
     OVERDUE: { label: 'Quá hạn', variant: 'danger' },
     CANCELLED: { label: 'Đã hủy', variant: 'muted' },
   };
