@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { getRolePermissionsByRoleApi, getCachedPermissions } from '@/lib/api';
 import Header from '@/components/layout/Header';
 import Sidebar from '@/components/layout/Sidebar';
 import Navbar from '@/components/layout/Navbar';
@@ -15,9 +16,23 @@ const sectionTitles: Record<Section, string> = {
 
 export default function StaffLayout({ defaultSection, allowedSections, children }: any) {
   const { user, logout } = useAuth();
-  const sidebarRole = user?.role === 'ADMIN' ? 'ADMIN' : 'MANAGER';
+  const dbRole = user?.role === 'ADMIN' ? 'ADMIN' : user?.role === 'LIBRARIAN' ? 'MANAGER' : 'MANAGER';
+  const sidebarRole = dbRole as 'USER' | 'MANAGER' | 'ADMIN';
   const [section, setSection] = useState<Section>(defaultSection);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [permissions, setPermissions] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!user?.role) return;
+    (async () => {
+      try {
+        const data = await getRolePermissionsByRoleApi(user.role);
+        setPermissions((Array.isArray(data) ? data : []).map((p: any) => p.permission));
+      } catch {
+        setPermissions(getCachedPermissions(user.role));
+      }
+    })();
+  }, [user]);
 
   const handleNavigate = (path: string) => {
     const map: Record<string, Section> = { '/dashboard': 'dashboard', '/books': 'books', '/users': 'users', '/loans': 'loans', '/categories': 'categories', '/subcategories': 'subcategories', '/permissions': 'permissions' };
@@ -32,7 +47,7 @@ export default function StaffLayout({ defaultSection, allowedSections, children 
       <div style={{ display: 'flex', flex: 1 }}>
         {sidebarOpen && <div className="sidebar-backdrop" onClick={() => setSidebarOpen(false)} />}
         <div className={`sidebar${sidebarOpen ? ' open' : ''}`}>
-          <Sidebar activePath={`/${section}`} onNavigate={handleNavigate} role={sidebarRole} />
+          <Sidebar activePath={`/${section}`} onNavigate={handleNavigate} role={sidebarRole} permissions={permissions} />
         </div>
 
         <main className="main-content container" style={{ paddingTop: '24px' }}>

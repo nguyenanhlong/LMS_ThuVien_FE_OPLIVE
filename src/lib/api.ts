@@ -147,6 +147,17 @@ export async function registerApi(data: { username: string; full_name: string; e
 
 export { getToken, clearTokens };
 
+export function getCachedPermissions(role: string): string[] {
+  if (typeof window === 'undefined') return [];
+  try { return JSON.parse(localStorage.getItem(`permissions_${role}`) || '[]'); }
+  catch { return []; }
+}
+
+export function setCachedPermissions(role: string, perms: string[]) {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(`permissions_${role}`, JSON.stringify(perms));
+}
+
 export async function getLoansApi(params?: { status?: string; pageSize?: number; user_id?: number }) {
   return graphqlQuery<any>(
     `query GetLoans($query: GetLoansInput) { loans(query: $query) { items { id loan_date status cancelled_reason total_deposit total_rental_fee total_amount total_fine total_lost_fee total_initial_payment total_deposit_refund total_extra_payment borrower { user_id full_name email } books { loan_detail_id book_id title author image_url quantity borrow_days due_date return_date status deposit_amount rental_fee fine_amount lost_quantity lost_fee deposit_refund_amount extra_payment_amount } } } }`,
