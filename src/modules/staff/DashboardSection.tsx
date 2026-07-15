@@ -48,7 +48,7 @@ export default function DashboardSection() {
                   title
                   author
                   due_date
-                  return_date
+                  completed_at
                 }
               }
             }

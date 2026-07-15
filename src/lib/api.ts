@@ -147,6 +147,25 @@ export async function registerApi(data: { username: string; full_name: string; e
 
 export { getToken, clearTokens };
 
+export async function uploadBookImageApi(id: string | number, file: File) {
+  const query = `mutation($id: ID!, $file: Upload!) { updateBookImage(id: $id, image: $file) { id image_url } }`;
+  const variables = { id: String(id), file: null };
+  const map = { '0': ['variables.file'] };
+  const form = new FormData();
+  form.append('operations', JSON.stringify({ query, variables }));
+  form.append('map', JSON.stringify(map));
+  form.append('0', file);
+  const token = getToken();
+  const res = await fetch(`${API_BASE}/graphql`, {
+    method: 'POST',
+    headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), 'apollo-require-preflight': 'true' },
+    body: form,
+  });
+  const json = await res.json();
+  if (json.errors) throw new Error(json.errors[0].message || 'Upload failed');
+  return json.data?.updateBookImage;
+}
+
 export function getCachedPermissions(role: string): string[] {
   if (typeof window === 'undefined') return [];
   try { return JSON.parse(localStorage.getItem(`permissions_${role}`) || '[]'); }
@@ -160,7 +179,7 @@ export function setCachedPermissions(role: string, perms: string[]) {
 
 export async function getLoansApi(params?: { status?: string; pageSize?: number; user_id?: number }) {
   return graphqlQuery<any>(
-    `query GetLoans($query: GetLoansInput) { loans(query: $query) { items { id loan_date status cancelled_reason total_deposit total_rental_fee total_amount total_fine total_lost_fee total_initial_payment total_deposit_refund total_extra_payment borrower { user_id full_name email } books { loan_detail_id book_id title author image_url quantity borrow_days due_date return_date status deposit_amount rental_fee fine_amount lost_quantity lost_fee deposit_refund_amount extra_payment_amount } } } }`,
+    `query GetLoans($query: GetLoansInput) { loans(query: $query) { items { id loan_date status cancelled_reason total_deposit total_rental_fee total_amount total_fine total_lost_fee total_initial_payment total_deposit_refund total_extra_payment borrower { user_id full_name email } books { loan_detail_id book_id title author image_url quantity borrow_days due_date completed_at status deposit_amount rental_fee fine_amount lost_quantity lost_fee deposit_refund_amount extra_payment_amount returned_histories { id return_date return_quantity lost_quantity late_days fine_amount lost_fee deposit_refund_amount extra_payment_amount note } } } } }`,
     {
       query: {
         ...(params?.status ? { status: params.status } : {}),
@@ -172,7 +191,7 @@ export async function getLoansApi(params?: { status?: string; pageSize?: number;
 
 export async function getLoanByIdApi(id: string | number) {
   return graphqlQuery<any>(
-    `query GetLoan($id: ID!) { loan(id: $id) { id loan_date status cancelled_reason total_deposit total_rental_fee total_amount total_fine total_lost_fee total_initial_payment total_deposit_refund total_extra_payment borrower { user_id full_name email } books { loan_detail_id book_id title author image_url quantity borrow_days due_date return_date status deposit_amount rental_fee fine_amount lost_quantity lost_fee deposit_refund_amount extra_payment_amount } } }`,
+    `query GetLoan($id: ID!) { loan(id: $id) { id loan_date status cancelled_reason total_deposit total_rental_fee total_amount total_fine total_lost_fee total_initial_payment total_deposit_refund total_extra_payment borrower { user_id full_name email } books { loan_detail_id book_id title author image_url quantity borrow_days due_date completed_at status deposit_amount rental_fee fine_amount lost_quantity lost_fee deposit_refund_amount extra_payment_amount returned_histories { id return_date return_quantity lost_quantity late_days fine_amount lost_fee deposit_refund_amount extra_payment_amount note } } } }`,
     { id: String(id) }
   ).then(r => r.loan);
 }
@@ -193,25 +212,25 @@ export async function borrowingLoanApi(id: string | number) {
   `, { id: String(id) });
 }
 
-export async function returnLoanDetailApi(detailId: string | number, lost_quantity = 0) {
+export async function returnLoanDetailApi(detailId: string | number, input: { return_quantity: number; lost_quantity?: number; note?: string }) {
   return graphqlQuery(`
-    mutation ReturnLoanDetail($detailId: ID!, $lostQuantity: Int!) {
-      returnLoanDetail(detailId: $detailId, lostQuantity: $lostQuantity)
+    mutation ReturnLoanDetail($detailId: ID!, $input: ReturnDetailInput!) {
+      returnLoanDetail(detailId: $detailId, input: $input)
     }
-  `, { detailId: String(detailId), lostQuantity: lost_quantity });
+  `, { detailId: String(detailId), input });
 }
 
 export async function cancelLoanApi(id: string | number, cancelled_reason: string) {
   return graphqlQuery(`
-    mutation CancelLoan($id: ID!, $reason: String!) {
-      cancelLoan(id: $id, reason: $reason)
+    mutation CancelLoan($id: ID!, $input: CancelLoanInput!) {
+      cancelLoan(id: $id, input: $input)
     }
-  `, { id: String(id), reason: cancelled_reason });
+  `, { id: String(id), input: { cancelled_reason } });
 }
 
 export async function getBooksApi(params?: { keyword?: string; sub_category_id?: number; author?: string; is_active?: boolean; pageSize?: number }) {
   return graphqlQuery<any>(
-    `query GetBooks($query: GetBooksInput) { books(query: $query) { items { id title isbn author image_url publisher publisher_year description total_quantity borrowed_quantity max_borrow_days deposit_amount fine_per_day replacement_cost fee_per_day fee_per_week fee_per_month is_active sub_category_id sub_category { id name } } } }`,
+    `query GetBooks($query: GetBooksInput) { books(query: $query) { items { id title isbn author image_url publisher publisher_year description total_quantity borrowed_quantity max_borrow_days deposit_amount fine_per_day replacement_cost fee_per_day fee_per_week fee_per_month is_active sub_category_id sub_category { id name category { id name } } } } }`,
     {
       query: {
         ...(params?.keyword ? { keyword: params.keyword } : {}),
