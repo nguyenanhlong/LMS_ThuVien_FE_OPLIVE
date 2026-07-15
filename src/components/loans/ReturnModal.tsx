@@ -7,7 +7,7 @@ export default function ReturnModal({
 }: {
   open: boolean;
   loan: any;
-  onReturnDetail: (detailId: string, lostQty: number) => void;
+  onReturnDetail: (detailId: string, returnQty: number, lostQty: number) => void;
   onCancel: () => void;
   loading: boolean;
 }) {
@@ -73,7 +73,7 @@ export default function ReturnModal({
                           className="btn btn-success"
                           style={{ padding: '6px 12px', fontSize: '0.8125rem' }}
                           disabled={loading}
-                          onClick={() => onReturnDetail(d.id, lostMap[d.id] ?? 0)}
+                          onClick={() => onReturnDetail(d.id, d.quantity - (lostMap[d.id] ?? 0), lostMap[d.id] ?? 0)}
                         >
                           {loading ? '...' : 'Xác nhận trả'}
                         </button>
