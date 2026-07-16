@@ -31,6 +31,7 @@ export default function Header({
   role,
   user,
   onLogout,
+  onLoginRequest,
   navItems,
   searchTerm,
   onSearchChange,
@@ -40,12 +41,13 @@ export default function Header({
   role: 'USER' | 'MANAGER';
   user?: UserInfo | null;
   onLogout?: () => void;
+  onLoginRequest?: () => void;
   navItems?: HeaderNavItem[];
   searchTerm?: string;
   onSearchChange?: (value: string) => void;
   extraActions?: ReactNode;
 }) {
-  const initial = (user?.full_name || user?.username || '?').trim().charAt(0).toUpperCase();
+  const initial = user ? (user?.full_name || user?.username || '?').trim().charAt(0).toUpperCase() : '?';
   const [openKey, setOpenKey] = useState<string | null>(null);
   const navRef = useRef<HTMLElement>(null);
 
@@ -156,14 +158,20 @@ export default function Header({
           </button>
 
           {navItems ? (
-            <div className="header-user header-user-compact">
-              <span className="header-avatar" title={user?.full_name || user?.username}>{initial}</span>
-              {onLogout && (
-                <button onClick={onLogout} className="btn btn-secondary header-logout">
-                  Thoát
-                </button>
-              )}
-            </div>
+            user ? (
+              <div className="header-user header-user-compact">
+                <span className="header-avatar" title={user?.full_name || user?.username}>{initial}</span>
+                {onLogout && (
+                  <button onClick={onLogout} className="btn btn-secondary header-logout">
+                    Thoát
+                  </button>
+                )}
+              </div>
+            ) : (
+              <button onClick={onLoginRequest} className="btn btn-primary">
+                Đăng Nhập
+              </button>
+            )
           ) : (
             <div className="header-user">
               <span className="header-user-name">

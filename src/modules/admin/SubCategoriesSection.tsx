@@ -4,7 +4,11 @@ import { useState, useEffect, useCallback } from 'react';
 import { getCategoriesApi, getSubCategoriesApi, createSubCategoryApi, updateSubCategoryApi, deleteSubCategoryApi } from '@/lib/api';
 import Toast from '@/components/ui/Toast';
 
-export default function SubCategoriesSection() {
+export default function SubCategoriesSection({ permissions }: { permissions?: string[] }) {
+  const perms = permissions || [];
+  const canCreate = perms.includes('SUB_CATEGORY_CREATE');
+  const canUpdate = perms.includes('SUB_CATEGORY_UPDATE');
+  const canDelete = perms.includes('SUB_CATEGORY_DELETE');
   const [categories, setCategories] = useState<any[]>([]);
   const [selectedCat, setSelectedCat] = useState<string>('');
   const [subCategories, setSubCategories] = useState<any[]>([]);
@@ -73,7 +77,7 @@ export default function SubCategoriesSection() {
     <div>
       <div className="manager-header-actions">
         <h2 className="section-title">Danh Sách Danh Mục Con</h2>
-        {selectedCat && <button onClick={openAdd} className="btn btn-primary">+ Thêm Danh Mục Con</button>}
+        {selectedCat && canCreate && <button onClick={openAdd} className="btn btn-primary">+ Thêm Danh Mục Con</button>}
       </div>
 
       <div style={{ marginBottom: 24 }}>
@@ -96,7 +100,7 @@ export default function SubCategoriesSection() {
               <tr>
                 <th>ID</th>
                 <th>Tên Danh Mục Con</th>
-                <th>Hành Động</th>
+                {(canUpdate || canDelete) && <th>Hành Động</th>}
               </tr>
             </thead>
             <tbody>
@@ -104,10 +108,12 @@ export default function SubCategoriesSection() {
                 <tr key={sc.id}>
                   <td>{sc.id}</td>
                   <td><span style={{ fontWeight: 600 }}>{sc.name}</span></td>
-                  <td style={{ display: 'flex', gap: 8 }}>
-                    <button onClick={() => openEdit(sc)} className="btn btn-edit">Sửa</button>
-                    <button onClick={() => handleDelete(sc)} className="btn btn-danger">Xoá</button>
-                  </td>
+                  {(canUpdate || canDelete) && (
+                    <td style={{ display: 'flex', gap: 8 }}>
+                      {canUpdate && <button onClick={() => openEdit(sc)} className="btn btn-edit">Sửa</button>}
+                      {canDelete && <button onClick={() => handleDelete(sc)} className="btn btn-danger">Xoá</button>}
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>

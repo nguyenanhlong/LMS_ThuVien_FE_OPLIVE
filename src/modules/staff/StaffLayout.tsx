@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { getRolePermissionsByRoleApi, getCachedPermissions } from '@/lib/api';
 import Header from '@/components/layout/Header';
@@ -22,17 +22,28 @@ export default function StaffLayout({ defaultSection, allowedSections, children 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [permissions, setPermissions] = useState<string[]>([]);
 
-  useEffect(() => {
+  const fetchPermissions = useCallback(async () => {
     if (!user?.role) return;
-    (async () => {
-      try {
-        const data = await getRolePermissionsByRoleApi(user.role);
-        setPermissions((Array.isArray(data) ? data : []).map((p: any) => p.permission));
-      } catch {
-        setPermissions(getCachedPermissions(user.role));
-      }
-    })();
+    try {
+      const data = await getRolePermissionsByRoleApi(user.role);
+      setPermissions((Array.isArray(data) ? data : []).map((p: any) => p.permission));
+    } catch {
+      setPermissions(getCachedPermissions(user.role));
+    }
   }, [user]);
+
+  useEffect(() => { fetchPermissions(); }, [fetchPermissions]);
+
+  useEffect(() => {
+    const onFocus = () => fetchPermissions();
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [fetchPermissions]);
+
+  useEffect(() => {
+    const interval = setInterval(fetchPermissions, 60_000);
+    return () => clearInterval(interval);
+  }, [fetchPermissions]);
 
   const handleNavigate = (path: string) => {
     const map: Record<string, Section> = { '/dashboard': 'dashboard', '/books': 'books', '/users': 'users', '/loans': 'loans', '/categories': 'categories', '/subcategories': 'subcategories', '/permissions': 'permissions' };
@@ -52,7 +63,7 @@ export default function StaffLayout({ defaultSection, allowedSections, children 
 
         <main className="main-content container" style={{ paddingTop: '24px' }}>
           <Navbar title={sectionTitles[section]} role="MANAGER" />
-          {typeof children === 'function' ? children(section) : children}
+          {typeof children === 'function' ? children(section, permissions) : children}
         </main>
       </div>
 

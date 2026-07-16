@@ -8,7 +8,7 @@ import BorrowModal from '@/components/books/BorrowModal';
 import RecommendedBooks from '@/components/books/RecommendedBooks';
 import Toast from '@/components/ui/Toast';
 
-export default function BooksSection({ user, searchTerm, selectedCategory, onLoanCreated }: any) {
+export default function BooksSection({ user, searchTerm, selectedCategory, onLoanCreated, onRequireAuth }: any) {
   const [books, setBooks] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [borrowModal, setBorrowModal] = useState<any>(null);
@@ -56,6 +56,11 @@ export default function BooksSection({ user, searchTerm, selectedCategory, onLoa
 
   const handleBorrow = async (quantity: number, borrowDays: number) => {
     if (!borrowModal) return;
+    if (!user) {
+      setBorrowModal(null);
+      if (onRequireAuth) onRequireAuth();
+      return;
+    }
     try {
 
       await graphqlQuery(`
@@ -66,7 +71,6 @@ export default function BooksSection({ user, searchTerm, selectedCategory, onLoa
         }
       `, {
         input: {
-          user_id: user.id,
           items: [{ book_id: parseInt(borrowModal.id), quantity, borrow_days: borrowDays }],
         }
       });

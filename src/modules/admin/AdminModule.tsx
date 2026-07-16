@@ -12,14 +12,14 @@ import RolePermissionsSection from './RolePermissionsSection';
 export default function AdminModule() {
   return (
     <StaffLayout defaultSection="dashboard" allowedSections={['dashboard', 'books', 'users', 'loans', 'categories', 'subcategories', 'permissions']}>
-      {(section: string) => (
+      {(section: string, permissions: string[]) => (
         <>
           {section === 'dashboard' && <DashboardSection />}
           {section === 'books' && <BooksSection />}
           {section === 'loans' && <LoansSection />}
-          {section === 'users' && <UsersSection />}
-          {section === 'categories' && <CategoriesSection />}
-          {section === 'subcategories' && <SubCategoriesSection />}
+          {section === 'users' && <UsersSection permissions={permissions} />}
+          {section === 'categories' && <CategoriesSection permissions={permissions} />}
+          {section === 'subcategories' && <SubCategoriesSection permissions={permissions} />}
           {section === 'permissions' && <RolePermissionsSection />}
         </>
       )}

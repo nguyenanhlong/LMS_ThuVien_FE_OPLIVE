@@ -6,6 +6,7 @@ import { mapBook } from '@/utils/mappers';
 import BookTable from '@/components/books/BookTable';
 import BookModal from '@/components/books/BookModal';
 import Toast from '@/components/ui/Toast';
+import Pagination from '@/components/ui/Pagination';
 
 
 export default function BooksSection() {
@@ -15,6 +16,8 @@ export default function BooksSection() {
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [bookModal, setBookModal] = useState<boolean | any>(false);
   const [toast, setToast] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
@@ -35,7 +38,7 @@ export default function BooksSection() {
   const fetchBooks = useCallback(async () => {
     setLoading(true);
     try {
-      const params: any = { keyword: searchTerm || undefined, pageSize: 100 };
+      const params: any = { keyword: searchTerm || undefined, page, pageSize: 4 };
       if (selectedCatId) {
         const subs = await getSubCategoriesApi(Number(selectedCatId));
         const list = Array.isArray(subs) ? subs : (subs as any)?.items || [];
@@ -43,8 +46,13 @@ export default function BooksSection() {
       }
       const data = await getBooksApi(params);
       setBooks((data.items || []).map(mapBook));
+      setTotalPages(data.totalPages || 1);
     } catch (e: any) { setBooks([]); showToast(e.message || 'Lỗi khi tải danh sách sách', 'error'); }
     setLoading(false);
+  }, [searchTerm, selectedCatId, page]);
+
+  useEffect(() => {
+    setPage(1);
   }, [searchTerm, selectedCatId]);
 
   useEffect(() => {
@@ -116,6 +124,8 @@ export default function BooksSection() {
         onDelete={handleDelete}
         onAdd={() => setBookModal(true)}
       />
+
+      <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
 
       <BookModal
         open={!!bookModal}
