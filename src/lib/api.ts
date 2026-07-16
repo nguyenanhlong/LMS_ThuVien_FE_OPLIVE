@@ -228,16 +228,17 @@ export async function cancelLoanApi(id: string | number, cancelled_reason: strin
   `, { id: String(id), input: { cancelled_reason } });
 }
 
-export async function getBooksApi(params?: { keyword?: string; sub_category_id?: number; author?: string; is_active?: boolean; pageSize?: number }) {
+export async function getBooksApi(params?: { keyword?: string; sub_category_id?: number; author?: string; is_active?: boolean; page?: number; pageSize?: number }) {
   return graphqlQuery<any>(
-    `query GetBooks($query: GetBooksInput) { books(query: $query) { items { id title isbn author image_url publisher publisher_year description total_quantity borrowed_quantity max_borrow_days deposit_amount fine_per_day replacement_cost fee_per_day fee_per_week fee_per_month is_active sub_category_id sub_category { id name category { id name } } } } }`,
+    `query GetBooks($query: GetBooksInput) { books(query: $query) { items { id title isbn author image_url publisher publisher_year description total_quantity borrowed_quantity max_borrow_days deposit_amount fine_per_day replacement_cost fee_per_day fee_per_week fee_per_month is_active sub_category_id sub_category { id name category { id name } } } pageNumber totalItems totalPages } }`,
     {
       query: {
         ...(params?.keyword ? { keyword: params.keyword } : {}),
         ...(params?.sub_category_id ? { sub_category_id: params.sub_category_id } : {}),
         ...(params?.author ? { author: params.author } : {}),
         ...(params?.is_active !== undefined ? { is_active: params.is_active } : {}),
-        pageSize: params?.pageSize ?? 100,
+        page: params?.page ?? 1,
+        pageSize: params?.pageSize ?? 10,
       }
     }).then(r => r.books);
 }

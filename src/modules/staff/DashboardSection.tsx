@@ -61,10 +61,12 @@ export default function DashboardSection() {
     try {
       const userRes = await graphqlQuery(`
         query GetUsers {
-          users { id role }
+          users(query: { pageSize: 100 }) {
+            items { id role }
+          }
         }
       `);
-      setUsers((userRes.users || []).filter((u: any) => u.role === 'MEMBER'));
+      setUsers((userRes.users?.items || []).filter((u: any) => u.role === 'MEMBER'));
     } catch { setUsers([]); }
     setLoading(false);
   }, []);

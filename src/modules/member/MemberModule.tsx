@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { graphqlQuery } from '@/lib/api';
 import Header, { HeaderNavItem } from '@/components/layout/Header';
@@ -9,6 +9,7 @@ import Footer from '@/components/layout/Footer';
 import NotificationBell from '@/components/notifications/NotificationBell';
 import BooksSection from './BooksSection';
 import LoansSection from './LoansSection';
+import AuthModal from '@/components/auth/AuthModal';
 
 type Section = 'books' | 'loans';
 type NavKey = 'home' | 'search' | 'category' | 'recommend' | 'shelf';
@@ -25,6 +26,7 @@ export default function MemberModule() {
   const [pendingAnchor, setPendingAnchor] = useState<string | null>(null);
   const [activeLoanCount, setActiveLoanCount] = useState(0);
   const [activeNavKey, setActiveNavKey] = useState<NavKey>('home');
+  const [showAuth, setShowAuth] = useState(false);
 
   const sections: Record<Section, string> = { books: 'Tra Cứu Sách', loans: 'Phiếu Mượn Của Tôi' };
 
@@ -68,9 +70,14 @@ export default function MemberModule() {
   };
 
   const handleGoToLoans = () => {
+    if (!user) { setShowAuth(true); return; }
     setSection('loans');
     setActiveNavKey('shelf');
   };
+
+  const handleRequireAuth = useCallback(() => {
+    setShowAuth(true);
+  }, []);
 
   const handleSelectCategory = (category: string) => {
     setSelectedCategory(category);
@@ -102,11 +109,12 @@ export default function MemberModule() {
       <Header
         role="USER"
         user={user}
-        onLogout={logout}
+        onLogout={user ? logout : undefined}
+        onLoginRequest={() => setShowAuth(true)}
         navItems={navItems}
         searchTerm={searchTerm}
         onSearchChange={(v) => { setSearchTerm(v); setSection('books'); setActiveNavKey('search'); }}
-        extraActions={user && <NotificationBell userId={user.id} />}
+        extraActions={user ? <NotificationBell userId={user.id} /> : undefined}
       />
 
       <main className="main-content container" style={{ paddingTop: '24px' }}>
@@ -117,12 +125,15 @@ export default function MemberModule() {
             searchTerm={searchTerm}
             selectedCategory={selectedCategory}
             onLoanCreated={() => setLoanRefreshKey((k) => k + 1)}
+            onRequireAuth={handleRequireAuth}
           />
         )}
         {section === 'loans' && <LoansSection key={loanRefreshKey} user={user} />}
       </main>
 
       <Footer />
+
+      {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
     </div>
   );
 }

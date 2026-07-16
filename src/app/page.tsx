@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import Spinner from '@/components/ui/Spinner';
-import AuthModule from '@/modules/auth/AuthModule';
+
 import MemberModule from '@/modules/member/MemberModule';
 import LibrarianModule from '@/modules/librarian/LibrarianModule';
 import AdminModule from '@/modules/admin/AdminModule';
@@ -25,9 +25,9 @@ export default function Home() {
     return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Spinner /></div>;
   }
 
-  if (!user) return <AuthModule />;
+  if (!user) return <MemberModule />;
   if (user.role === 'MEMBER') return <MemberModule />;
   if (user.role === 'LIBRARIAN') return <LibrarianModule />;
   if (user.role === 'ADMIN') return <AdminModule />;
-  return <AuthModule />;
+  return <MemberModule />;
 }
