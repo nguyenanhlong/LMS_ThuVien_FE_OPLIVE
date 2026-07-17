@@ -1,10 +1,14 @@
 'use client';
 
-export default function UserEditModal({ user, onClose, onUpdate }: any) {
+import { useState } from 'react';
+
+export default function UserEditModal({ user, onClose, onUpdate, canEditRole, canEditStatus }: any) {
+  const [role, setRole] = useState(user.role);
+  const [isActive, setIsActive] = useState(String(user.is_active));
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const fd = new FormData(e.currentTarget as HTMLFormElement);
-    onUpdate({ role: fd.get('role'), is_active: fd.get('is_active') === 'true' });
+    onUpdate({ role, is_active: isActive === 'true' });
   };
 
   return (
@@ -20,21 +24,25 @@ export default function UserEditModal({ user, onClose, onUpdate }: any) {
           </button>
         </div>
         <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label>Vai trò</label>
-            <select name="role" className="form-control" defaultValue={user.role} style={{ background: 'var(--bg-tertiary)' }}>
-              <option value="MEMBER">Độc Giả</option>
-              <option value="LIBRARIAN">Thủ Thư</option>
-              <option value="ADMIN">Quản Trị</option>
-            </select>
-          </div>
-          <div className="form-group">
-            <label>Trạng thái</label>
-            <select name="is_active" className="form-control" defaultValue={String(user.is_active)} style={{ background: 'var(--bg-tertiary)' }}>
-              <option value="true">Hoạt động</option>
-              <option value="false">Vô hiệu</option>
-            </select>
-          </div>
+          {canEditRole !== false && (
+            <div className="form-group">
+              <label>Vai trò</label>
+              <select className="form-control" value={role} onChange={(e) => setRole(e.target.value)} style={{ background: 'var(--bg-tertiary)' }}>
+                <option value="MEMBER">Độc Giả</option>
+                <option value="LIBRARIAN">Thủ Thư</option>
+                <option value="ADMIN">Quản Trị</option>
+              </select>
+            </div>
+          )}
+          {canEditStatus !== false && (
+            <div className="form-group">
+              <label>Trạng thái</label>
+              <select className="form-control" value={isActive} onChange={(e) => setIsActive(e.target.value)} style={{ background: 'var(--bg-tertiary)' }}>
+                <option value="true">Hoạt động</option>
+                <option value="false">Vô hiệu</option>
+              </select>
+            </div>
+          )}
           <div className="modal-actions">
             <button type="button" onClick={onClose} className="btn btn-secondary">Hủy</button>
             <button type="submit" className="btn btn-primary">Lưu Thay Đổi</button>

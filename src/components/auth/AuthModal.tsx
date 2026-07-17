@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { CloseIcon } from '@/components/ui/icons';
 
-export default function AuthModule() {
-  const { login, register } = useAuth();
+export default function AuthModal({ onClose }: { onClose: () => void }) {
+  const { login, register, user } = useAuth();
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -13,6 +14,10 @@ export default function AuthModule() {
   const [loginPass, setLoginPass] = useState('');
 
   const [regData, setRegData] = useState({ username: '', full_name: '', email: '', password: '' });
+
+  useEffect(() => {
+    if (user) onClose();
+  }, [user, onClose]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,12 +48,16 @@ export default function AuthModule() {
   const toggleMode = () => { setMode(mode === 'login' ? 'register' : 'login'); setError(''); };
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-primary)' }}>
-      <div className="glass-panel" style={{ padding: '40px', width: '100%', maxWidth: '420px' }}>
-        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-          <h1 style={{ fontSize: '1.75rem', fontWeight: 800 }}>THƯ VIỆN <span className="gradient-text">SỐ</span></h1>
+    <div className="modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="modal-content glass-panel" style={{ maxWidth: '420px', padding: '40px' }}>
+        <button onClick={onClose} className="modal-close" style={{ position: 'absolute', top: '16px', right: '16px' }}>
+          <CloseIcon />
+        </button>
+
+        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: 800 }}>THƯ VIỆN <span className="gradient-text">SỐ</span></h2>
           <p style={{ color: 'var(--text-muted)', marginTop: '8px' }}>
-            {mode === 'login' ? 'Đăng nhập để tiếp tục' : 'Tạo tài khoản mới'}
+            {mode === 'login' ? 'Đăng nhập để mượn sách' : 'Tạo tài khoản mới'}
           </p>
         </div>
 

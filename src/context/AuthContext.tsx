@@ -1,6 +1,6 @@
 'use client';
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
-import { api, loginApi, registerApi, clearTokens, getToken } from '@/lib/api';
+import { loginApi, registerApi, clearTokens, getToken } from '@/lib/api';
 
 interface UserInfo {
   id: number;
@@ -14,7 +14,7 @@ interface AuthContextType {
   user: UserInfo | null;
   loading: boolean;
   login: (username: string, password: string) => Promise<void>;
-  register: (data: { username: string; full_name: string; email: string; password: string; role: string }) => Promise<void>;
+  register: (data: { username: string; full_name: string; email: string; password: string }) => Promise<void>;
   logout: () => void;
   isManager: boolean;
 }
@@ -59,7 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const register = useCallback(async (data: { username: string; full_name: string; email: string; password: string; role: string }) => {
+  const register = useCallback(async (data: { username: string; full_name: string; email: string; password: string }) => {
     await registerApi(data);
   }, []);
 

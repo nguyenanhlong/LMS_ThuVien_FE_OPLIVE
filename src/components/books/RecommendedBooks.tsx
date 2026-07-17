@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { api } from '@/lib/api';
+import { graphqlQuery } from '@/lib/api';
 import { mapBook } from '@/utils/mappers';
 import { getCover } from '@/lib/category-covers';
 
@@ -14,8 +14,23 @@ export default function RecommendedBooks() {
     let cancelled = false;
     (async () => {
       try {
-        const data = await api<any>('/books?pageSize=10');
-        if (!cancelled) setBooks((data.items || []).map(mapBook));
+        const data = await graphqlQuery<any>(`
+          query GetBooks($query: GetBooksInput) {
+            books(query: $query) {
+              items {
+                id
+                title
+                author
+                publisher
+                description
+                total_quantity
+                borrowed_quantity
+                image_url
+              }
+            }
+          }
+        `, { query: { pageSize: 10 } });
+        if (!cancelled) setBooks((data.books?.items || []).map(mapBook));
       } catch {
         if (!cancelled) setBooks([]);
       } finally {

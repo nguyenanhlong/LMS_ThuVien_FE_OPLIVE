@@ -24,7 +24,7 @@ export function mapBook(b: any) {
     title: b.title,
     isbn: b.isbn || '',
     author: b.author || '',
-    category: b.publisher || 'Khác',
+    category: b.sub_category?.category?.name || b.sub_category?.name || 'Khác',
     description: b.description || '',
     image_url: resolveImageUrl(b.image_url),
     sub_category_id: b.sub_category_id ?? b.sub_category?.id ?? null,
@@ -52,7 +52,7 @@ export function mapLoan(l: any) {
     ? dueDates.reduce((a: string, b: string) => (new Date(a) < new Date(b) ? a : b))
     : null;
 
-  const returnDates = items.map((d: any) => d.return_date).filter(Boolean);
+  const returnDates = items.map((d: any) => d.completed_at).filter(Boolean);
   const latestReturn = returnDates.length
     ? returnDates.reduce((a: string, b: string) => (new Date(a) > new Date(b) ? a : b))
     : null;
@@ -74,7 +74,7 @@ export function mapLoan(l: any) {
       quantity: d.quantity || 0,
       status: d.status,
       dueDate: d.due_date ? new Date(d.due_date).toLocaleDateString('vi-VN') : '',
-      returnDate: d.return_date ? new Date(d.return_date).toLocaleDateString('vi-VN') : '',
+      returnDate: d.completed_at ? new Date(d.completed_at).toLocaleDateString('vi-VN') : '',
       lostQuantity: Number(d.lost_quantity ?? 0),
     })),
     book: { id: String(firstBook.book_id || ''), title: firstBook.title || '', author: firstBook.author || '' },
@@ -89,12 +89,10 @@ export function mapLoan(l: any) {
     totalFine: Number(l.total_fine ?? 0),
     totalPayment: Number(l.total_initial_payment ?? 0),
     status: isOverdue ? 'OVERDUE' : l.status,
+    _raw: l,
   };
 }
 
-// Trạng thái thật theo backend LoanStatus/LoanDetailStatus (PENDING, PENDING_PAYMENT,
-// BORROWING, COMPLETED, CANCELLED / OVERDUE, RETURNED) — dùng riêng cho khu vực Member
-// vì mapLoan() ở trên vẫn giữ nguyên cho phần Staff (LoanTable/LoanHistory) dùng vocab cũ.
 export function mapMemberLoan(l: any) {
   return {
     id: String(l.id),

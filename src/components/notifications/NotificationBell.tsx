@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { api } from '@/lib/api';
+import { graphqlQuery } from '@/lib/api';
 
 interface Notification {
   id: number;
@@ -29,8 +29,18 @@ export default function NotificationBell({ userId }: { userId: number }) {
 
   const fetchNotifications = async () => {
     try {
-      const data = await api<Notification[]>(`/lms-notifications/user/${userId}`);
-      setNotifications(data || []);
+      const data = await graphqlQuery<any>(`
+        query GetNotifications($userId: ID!) {
+          notificationsByUser(userId: $userId) {
+            id
+            title
+            message
+            is_read
+            created_at
+          }
+        }
+      `, { userId: String(userId) });
+      setNotifications(data.notificationsByUser || []);
     } catch {
       setNotifications([]);
     }
@@ -56,7 +66,14 @@ export default function NotificationBell({ userId }: { userId: number }) {
   const markRead = async (ids: number[]) => {
     if (!ids.length) return;
     try {
-      await api('/lms-notifications/read', { method: 'PATCH', body: JSON.stringify({ ids }) });
+      await graphqlQuery(`
+        mutation MarkRead($ids: [ID!]!) {
+          markNotificationsAsRead(ids: $ids) {
+            message
+            ids
+          }
+        }
+      `, { ids: ids.map(String) });
       setNotifications((prev) => prev.map((n) => (ids.includes(n.id) ? { ...n, is_read: true } : n)));
     } catch {
       // ignore

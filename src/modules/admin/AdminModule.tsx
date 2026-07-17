@@ -5,16 +5,22 @@ import DashboardSection from '@/modules/staff/DashboardSection';
 import BooksSection from '@/modules/staff/BooksSection';
 import LoansSection from '@/modules/staff/LoansSection';
 import UsersSection from '@/modules/staff/UsersSection';
+import CategoriesSection from './CategoriesSection';
+import SubCategoriesSection from './SubCategoriesSection';
+import RolePermissionsSection from './RolePermissionsSection';
 
 export default function AdminModule() {
   return (
-    <StaffLayout defaultSection="dashboard" allowedSections={['dashboard', 'books', 'users', 'loans']}>
-      {(section: string) => (
+    <StaffLayout defaultSection="dashboard" allowedSections={['dashboard', 'books', 'users', 'loans', 'categories', 'subcategories', 'permissions']}>
+      {(section: string, permissions: string[]) => (
         <>
           {section === 'dashboard' && <DashboardSection />}
           {section === 'books' && <BooksSection />}
           {section === 'loans' && <LoansSection />}
-          {section === 'users' && <UsersSection />}
+          {section === 'users' && <UsersSection permissions={permissions} />}
+          {section === 'categories' && <CategoriesSection permissions={permissions} />}
+          {section === 'subcategories' && <SubCategoriesSection permissions={permissions} />}
+          {section === 'permissions' && <RolePermissionsSection />}
         </>
       )}
     </StaffLayout>

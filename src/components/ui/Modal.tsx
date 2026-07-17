@@ -4,7 +4,7 @@ export default function Modal({ open, title, subtitle, children, onClose }: any)
   if (!open) return null;
   return (
     <div className="modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="modal-content glass-panel">
+        <div className="modal-content glass-panel" style={{ maxHeight: '85vh', overflowY: 'auto' }}>
         <div className="modal-header">
           <div>
             <h3 className="modal-title">{title}</h3>

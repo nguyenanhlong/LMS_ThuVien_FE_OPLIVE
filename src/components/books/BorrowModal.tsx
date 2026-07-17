@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { api } from '@/lib/api';
+import { graphqlQuery } from '@/lib/api';
 import { calculateRentalFee } from '@/utils/mappers';
 import { CloseIcon } from '@/components/ui/icons';
 
@@ -31,8 +31,23 @@ export default function BorrowModal({
     setError('');
     setQuantity(1);
     setLoadingDetail(true);
-    api<any>(`/books/${book.id}`)
-      .then((b) => {
+    graphqlQuery<any>(`
+      query GetBook($id: ID!) {
+        book(id: $id) {
+          id
+          title
+          total_quantity
+          borrowed_quantity
+          max_borrow_days
+          deposit_amount
+          fee_per_day
+          fee_per_week
+          fee_per_month
+        }
+      }
+    `, { id: book.id })
+      .then((res) => {
+        const b = res.book;
         const available = Math.max((b.total_quantity || 0) - (b.borrowed_quantity || 0), 0);
         const maxDays = b.max_borrow_days || DEFAULT_BORROW_DAYS;
         setDetail({

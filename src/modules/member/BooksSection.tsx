@@ -1,14 +1,14 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { api } from '@/lib/api';
+import { graphqlQuery } from '@/lib/api';
 import { mapBook } from '@/utils/mappers';
 import BookCard from '@/components/books/BookCard';
 import BorrowModal from '@/components/books/BorrowModal';
 import RecommendedBooks from '@/components/books/RecommendedBooks';
 import Toast from '@/components/ui/Toast';
 
-export default function BooksSection({ user, searchTerm, selectedCategory, onLoanCreated }: any) {
+export default function BooksSection({ user, searchTerm, selectedCategory, onLoanCreated, onRequireAuth }: any) {
   const [books, setBooks] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [borrowModal, setBorrowModal] = useState<any>(null);
@@ -22,8 +22,27 @@ export default function BooksSection({ user, searchTerm, selectedCategory, onLoa
   const fetchBooks = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await api<any>(`/books?keyword=${encodeURIComponent(searchTerm)}&pageSize=100`);
-      setBooks((data.items || []).map(mapBook));
+      const res = await graphqlQuery(`
+        query GetBooks($query: GetBooksInput) {
+          books(query: $query) {
+            items {
+              id
+              title
+              author
+              publisher
+              description
+              total_quantity
+              borrowed_quantity
+            }
+          }
+        }
+      `, {
+        query: {
+          keyword: searchTerm,
+          pageSize: 100
+        }
+      });
+      setBooks((res.books?.items || []).map(mapBook));
     } catch { setBooks([]); }
     setLoading(false);
   }, [searchTerm]);
@@ -37,13 +56,23 @@ export default function BooksSection({ user, searchTerm, selectedCategory, onLoa
 
   const handleBorrow = async (quantity: number, borrowDays: number) => {
     if (!borrowModal) return;
+    if (!user) {
+      setBorrowModal(null);
+      if (onRequireAuth) onRequireAuth();
+      return;
+    }
     try {
-      await api('/loans', {
-        method: 'POST',
-        body: JSON.stringify({
-          user_id: user.id,
+
+      await graphqlQuery(`
+        mutation CreateLoan($input: CreateLoanInput!) {
+          createLoan(input: $input) {
+            id
+          }
+        }
+      `, {
+        input: {
           items: [{ book_id: parseInt(borrowModal.id), quantity, borrow_days: borrowDays }],
-        }),
+        }
       });
       showToast('Gửi yêu cầu mượn thành công! Chờ thủ thư xác nhận.', 'success');
       setBorrowModal(null);
