@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { api } from '@/lib/api';
+import { getMyNotificationsApi, markNotificationsReadApi } from '@/lib/api';
 
 interface Notification {
   id: number;
@@ -22,14 +22,14 @@ function timeAgo(dateStr: string) {
   return `${days} ngày trước`;
 }
 
-export default function NotificationBell({ userId }: { userId: number }) {
+export default function NotificationBell() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
   const fetchNotifications = async () => {
     try {
-      const data = await api<Notification[]>(`/lms-notifications/user/${userId}`);
+      const data = await getMyNotificationsApi();
       setNotifications(data || []);
     } catch {
       setNotifications([]);
@@ -40,7 +40,7 @@ export default function NotificationBell({ userId }: { userId: number }) {
     fetchNotifications();
     const interval = setInterval(fetchNotifications, 60000);
     return () => clearInterval(interval);
-  }, [userId]);
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -56,7 +56,7 @@ export default function NotificationBell({ userId }: { userId: number }) {
   const markRead = async (ids: number[]) => {
     if (!ids.length) return;
     try {
-      await api('/lms-notifications/read', { method: 'PATCH', body: JSON.stringify({ ids }) });
+      await markNotificationsReadApi(ids);
       setNotifications((prev) => prev.map((n) => (ids.includes(n.id) ? { ...n, is_read: true } : n)));
     } catch {
       // ignore

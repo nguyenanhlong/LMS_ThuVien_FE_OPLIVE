@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { api } from '@/lib/api';
+import { getBooksApi } from '@/lib/api';
 import { mapBook } from '@/utils/mappers';
 import { getCover } from '@/lib/category-covers';
 
@@ -14,7 +14,7 @@ export default function RecommendedBooks() {
     let cancelled = false;
     (async () => {
       try {
-        const data = await api<any>('/books?pageSize=10');
+        const data = await getBooksApi({ pageSize: 10 });
         if (!cancelled) setBooks((data.items || []).map(mapBook));
       } catch {
         if (!cancelled) setBooks([]);

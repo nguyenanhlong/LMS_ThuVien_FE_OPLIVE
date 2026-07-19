@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
-import { api } from '@/lib/api';
+import { getBookApi } from '@/lib/api';
 import { resolveImageUrl } from '@/utils/mappers';
 import BookDetail from '@/components/books/BookDetail';
 import { ArrowLeftIcon } from '@/components/ui/icons';
@@ -18,8 +18,7 @@ export default function BookDetailPage({ params }: { params: Promise<{ id: strin
     (async () => {
       setLoading(true);
       try {
-        const data = await api<any>(`/books/${id}`);
-        const b = data;
+        const b = await getBookApi(id);
         const available = (b.total_quantity || 0) - (b.borrowed_quantity || 0);
         setBook({
           id: String(b.id),
