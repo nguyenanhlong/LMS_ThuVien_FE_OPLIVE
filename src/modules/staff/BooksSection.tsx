@@ -7,6 +7,7 @@ import BookTable from '@/components/books/BookTable';
 import BookModal from '@/components/books/BookModal';
 import Toast from '@/components/ui/Toast';
 
+
 export default function BooksSection() {
   const [books, setBooks] = useState<any[]>([]);
   const [subCategories, setSubCategories] = useState<any[]>([]);
@@ -40,7 +41,7 @@ export default function BooksSection() {
         pageSize: 100,
       });
       setBooks((data.items || []).map(mapBook));
-    } catch { setBooks([]); }
+    } catch (e: any) { setBooks([]); showToast(e.message || 'Lỗi khi tải danh sách sách', 'error'); }
     setLoading(false);
   }, [searchTerm, selectedSubCat]);
 

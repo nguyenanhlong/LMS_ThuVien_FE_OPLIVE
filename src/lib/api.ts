@@ -73,6 +73,9 @@ export async function gql<T = any>(query: string, variables?: Record<string, any
   return json.data as T;
 }
 
+// Alias giữ tương thích với các module Staff/Admin (Long) đang gọi trực tiếp graphqlQuery(...).
+export { gql as graphqlQuery };
+
 export async function loginApi(username: string, password: string) {
   const data = await gql<{ login: { access_token: string; refresh_token: string } }>(
     `mutation Login($input: LoginInput!) { login(input: $input) { access_token refresh_token } }`,
@@ -97,7 +100,7 @@ const BOOK_FIELDS = `
   id title isbn author image_url publisher publisher_year description
   total_quantity borrowed_quantity max_borrow_days
   deposit_amount fine_per_day replacement_cost fee_per_day fee_per_week fee_per_month
-  is_active
+  is_active sub_category_id sub_category { id name }
 `;
 
 export async function getBooksApi(params?: { keyword?: string; sub_category_id?: number; author?: string; is_active?: boolean; pageSize?: number }) {
@@ -116,12 +119,37 @@ export async function getBookApi(id: string | number) {
   return data.book;
 }
 
+export async function createBookApi(data: any) {
+  const result = await gql<{ createBook: any }>(
+    `mutation CreateBook($input: CreateBookInput!) { createBook(input: $input) { id } }`,
+    { input: data },
+  );
+  return result.createBook;
+}
+
+export async function updateBookApi(id: string | number, data: any) {
+  const result = await gql<{ updateBook: any }>(
+    `mutation UpdateBook($id: ID!, $input: UpdateBookInput!) { updateBook(id: $id, input: $input) { id } }`,
+    { id: String(id), input: data },
+  );
+  return result.updateBook;
+}
+
+export async function deleteBookApi(id: string | number) {
+  const result = await gql<{ deleteBook: boolean }>(
+    `mutation DeleteBook($id: ID!) { deleteBook(id: $id) }`,
+    { id: String(id) },
+  );
+  return result.deleteBook;
+}
+
 const LOAN_FIELDS = `
   id loan_date status cancelled_reason
   total_deposit total_rental_fee total_amount total_fine total_lost_fee
+  total_initial_payment total_deposit_refund total_extra_payment
   borrower { user_id full_name email }
   books {
-    loan_detail_id book_id title author quantity
+    loan_detail_id book_id title author image_url quantity
     returned_quantity lost_quantity remaining_quantity
     borrow_days due_date completed_at status
     deposit_amount rental_fee fine_amount lost_fee deposit_refund_amount extra_payment_amount
@@ -136,12 +164,47 @@ export async function getLoansApi(params?: { status?: string; pageSize?: number 
   return data.loans;
 }
 
+export async function getLoanByIdApi(id: string | number) {
+  const data = await gql<{ loan: any }>(
+    `query Loan($id: ID!) { loan(id: $id) { ${LOAN_FIELDS} } }`,
+    { id: String(id) },
+  );
+  return data.loan;
+}
+
 export async function createLoanApi(items: { book_id: number; quantity: number; borrow_days: number }[]) {
   const data = await gql<{ createLoan: any }>(
     `mutation CreateLoan($input: CreateLoanInput!) { createLoan(input: $input) { ${LOAN_FIELDS} } }`,
     { input: { items } },
   );
   return data.createLoan;
+}
+
+export async function confirmLoanApi(id: string | number) {
+  const data = await gql<{ confirmLoan: boolean }>(
+    `mutation ConfirmLoan($id: ID!) { confirmLoan(id: $id) }`,
+    { id: String(id) },
+  );
+  return data.confirmLoan;
+}
+
+export async function borrowingLoanApi(id: string | number) {
+  const data = await gql<{ payAndBorrow: boolean }>(
+    `mutation PayAndBorrow($id: ID!) { payAndBorrow(id: $id) }`,
+    { id: String(id) },
+  );
+  return data.payAndBorrow;
+}
+
+// Lưu ý: backend yêu cầu input.return_quantity (bắt buộc) chứ không chỉ lostQuantity —
+// chỗ gọi hàm này ở staff/LoansSection.tsx chưa truyền return_quantity nên sẽ lỗi runtime,
+// cần Chinh cập nhật UI trả sách để thu thêm số lượng trả trước khi gọi.
+export async function returnLoanDetailApi(detailId: string | number, lost_quantity = 0) {
+  const data = await gql<{ returnLoanDetail: boolean }>(
+    `mutation ReturnLoanDetail($detailId: ID!, $input: ReturnDetailInput!) { returnLoanDetail(detailId: $detailId, input: $input) }`,
+    { detailId: String(detailId), input: { return_quantity: 0, lost_quantity } },
+  );
+  return data.returnLoanDetail;
 }
 
 export async function cancelLoanApi(id: string | number, cancelled_reason: string) {
@@ -154,9 +217,33 @@ export async function cancelLoanApi(id: string | number, cancelled_reason: strin
 
 export async function getCategoriesApi() {
   const data = await gql<{ categories: any[] }>(
-    `query Categories { categories { id name sub_categories { id name } } }`,
+    `query Categories { categories { id name created_at updated_at sub_categories { id name } } }`,
   );
   return data.categories;
+}
+
+export async function createCategoryApi(name: string) {
+  const data = await gql<{ createCategory: any }>(
+    `mutation CreateCategory($input: CreateCategoryInput!) { createCategory(input: $input) { id name } }`,
+    { input: { name } },
+  );
+  return data.createCategory;
+}
+
+export async function updateCategoryApi(id: string | number, name: string) {
+  const data = await gql<{ updateCategory: any }>(
+    `mutation UpdateCategory($id: ID!, $input: UpdateCategoryInput!) { updateCategory(id: $id, input: $input) { id name } }`,
+    { id: String(id), input: { name } },
+  );
+  return data.updateCategory;
+}
+
+export async function deleteCategoryApi(id: string | number) {
+  const data = await gql<{ deleteCategory: boolean }>(
+    `mutation DeleteCategory($id: ID!) { deleteCategory(id: $id) }`,
+    { id: String(id) },
+  );
+  return data.deleteCategory;
 }
 
 export async function getSubCategoriesApi(categoryId?: number) {
@@ -165,6 +252,53 @@ export async function getSubCategoriesApi(categoryId?: number) {
     { categoryId },
   );
   return data.subCategories;
+}
+
+export async function createSubCategoryApi(category_id: number, name: string) {
+  const data = await gql<{ createSubCategory: any }>(
+    `mutation CreateSubCategory($input: CreateSubCategoryInput!) { createSubCategory(input: $input) { id name category_id } }`,
+    { input: { category_id, name } },
+  );
+  return data.createSubCategory;
+}
+
+export async function updateSubCategoryApi(id: string | number, data: { category_id?: number; name?: string }) {
+  const result = await gql<{ updateSubCategory: any }>(
+    `mutation UpdateSubCategory($id: ID!, $input: UpdateSubCategoryInput!) { updateSubCategory(id: $id, input: $input) { id name category_id } }`,
+    { id: String(id), input: data },
+  );
+  return result.updateSubCategory;
+}
+
+export async function deleteSubCategoryApi(id: string | number) {
+  const data = await gql<{ deleteSubCategory: boolean }>(
+    `mutation DeleteSubCategory($id: ID!) { deleteSubCategory(id: $id) }`,
+    { id: String(id) },
+  );
+  return data.deleteSubCategory;
+}
+
+export async function getRolePermissionsApi() {
+  const data = await gql<{ rolePermissions: any[] }>(
+    `query GetRolePermissions { rolePermissions { id role permission } }`,
+  );
+  return data.rolePermissions;
+}
+
+export async function getRolePermissionsByRoleApi(role: string) {
+  const data = await gql<{ rolePermissionsByRole: any[] }>(
+    `query GetRolePermissionsByRole($role: UserRole!) { rolePermissionsByRole(role: $role) { id role permission } }`,
+    { role },
+  );
+  return data.rolePermissionsByRole;
+}
+
+export async function updateRolePermissionsApi(role: string, permissions: string[]) {
+  const data = await gql<{ updateRolePermissions: any[] }>(
+    `mutation UpdateRolePermissions($role: UserRole!, $input: UpdateRolePermissionsInput!) { updateRolePermissions(role: $role, input: $input) { id role permission } }`,
+    { role, input: { permissions } },
+  );
+  return data.updateRolePermissions;
 }
 
 export async function getMyNotificationsApi() {
@@ -180,56 +314,4 @@ export async function markNotificationsReadApi(ids: (string | number)[]) {
     { ids },
   );
   return data.markNotificationsAsRead;
-}
-
-// --- Legacy REST shims ---
-// Backend đã bỏ hẳn REST (chỉ còn /graphql). Các hàm dưới đây vẫn gọi REST cũ,
-// giữ lại CHỈ để phần Staff/Admin (staff/BooksSection, staff/LoansSection,
-// staff/DashboardSection, staff/UsersSection) không vỡ compile — các hàm này
-// sẽ lỗi runtime (404) cho tới khi phần đó được migrate sang GraphQL tương tự Member.
-export async function api<T = any>(path: string, options: RequestInit = {}): Promise<T> {
-  const token = getToken();
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    ...(options.headers as Record<string, string>),
-  };
-  if (token) headers['Authorization'] = `Bearer ${token}`;
-  const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
-  const json = await res.json();
-  if (!res.ok) {
-    const msg = json.message || `HTTP ${res.status}`;
-    throw new Error(Array.isArray(msg) ? msg[0] : msg);
-  }
-  return json.data as T;
-}
-
-export async function createBookApi(data: any) {
-  return api('/books', { method: 'POST', body: JSON.stringify(data) });
-}
-
-export async function updateBookApi(id: string | number, data: any) {
-  return api(`/books/${id}`, { method: 'PUT', body: JSON.stringify(data) });
-}
-
-export async function deleteBookApi(id: string | number) {
-  return api(`/books/${id}`, { method: 'DELETE' });
-}
-
-export async function getLoanByIdApi(id: string | number) {
-  return api<any>(`/loans/${id}`);
-}
-
-export async function confirmLoanApi(id: string | number) {
-  return api(`/loans/${id}/status-to-confirm`, { method: 'PATCH' });
-}
-
-export async function borrowingLoanApi(id: string | number) {
-  return api(`/loans/${id}/status-to-borrowing`, { method: 'PATCH' });
-}
-
-export async function returnLoanDetailApi(detailId: string | number, lost_quantity = 0) {
-  return api(`/loans/details/${detailId}/status-to-returned`, {
-    method: 'PATCH',
-    body: JSON.stringify({ lost_quantity }),
-  });
 }

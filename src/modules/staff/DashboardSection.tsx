@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { api } from '@/lib/api';
+import { graphqlQuery } from '@/lib/api';
 import { mapBook, mapLoan } from '@/utils/mappers';
 import DashboardCards from '@/components/dashboard/DashboardCards';
 import DashboardChart from '@/components/dashboard/DashboardChart';
@@ -17,15 +17,54 @@ export default function DashboardSection() {
     setLoading(true);
     try {
       const [bookRes, loanRes] = await Promise.all([
-        api<any>('/books?pageSize=100'),
-        api<any>('/loans?pageSize=100'),
+        graphqlQuery(`
+          query GetBooks($query: GetBooksInput) {
+            books(query: $query) {
+              items {
+                id
+                title
+                author
+                publisher
+                description
+                total_quantity
+                borrowed_quantity
+              }
+            }
+          }
+        `, { query: { pageSize: 100 } }),
+        graphqlQuery(`
+          query GetLoans($query: GetLoansInput) {
+            loans(query: $query) {
+              items {
+                id
+                loan_date
+                status
+                borrower {
+                  user_id
+                  full_name
+                }
+                books {
+                  book_id
+                  title
+                  author
+                  due_date
+                  return_date
+                }
+              }
+            }
+          }
+        `, { query: { pageSize: 100 } })
       ]);
-      setBooks((bookRes.items || []).map(mapBook));
-      setLoans((loanRes.items || []).map(mapLoan));
+      setBooks((bookRes.books?.items || []).map(mapBook));
+      setLoans((loanRes.loans?.items || []).map(mapLoan));
     } catch { /* ignore */ }
     try {
-      const userRes = await api<any[]>('/users');
-      setUsers(userRes || []);
+      const userRes = await graphqlQuery(`
+        query GetUsers {
+          users { id role }
+        }
+      `);
+      setUsers((userRes.users || []).filter((u: any) => u.role === 'MEMBER'));
     } catch { setUsers([]); }
     setLoading(false);
   }, []);

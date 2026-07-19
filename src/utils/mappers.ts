@@ -89,12 +89,10 @@ export function mapLoan(l: any) {
     totalFine: Number(l.total_fine ?? 0),
     totalPayment: Number(l.total_initial_payment ?? 0),
     status: isOverdue ? 'OVERDUE' : l.status,
+    _raw: l,
   };
 }
 
-// Trạng thái thật theo backend LoanStatus/LoanDetailStatus (PENDING, PENDING_PAYMENT,
-// BORROWING, COMPLETED, CANCELLED / OVERDUE, RETURNED) — dùng riêng cho khu vực Member
-// vì mapLoan() ở trên vẫn giữ nguyên cho phần Staff (LoanTable/LoanHistory) dùng vocab cũ.
 export function mapMemberLoan(l: any) {
   return {
     id: String(l.id),

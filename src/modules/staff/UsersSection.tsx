@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { api } from '@/lib/api';
+import { graphqlQuery } from '@/lib/api';
 import UserEditModal from '@/components/users/UserEditModal';
 import Toast from '@/components/ui/Toast';
 
@@ -19,8 +19,19 @@ export default function UsersSection() {
   const fetchUsers = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await api<any[]>('/users');
-      setUsers(data || []);
+      const res = await graphqlQuery(`
+        query GetUsers {
+          users {
+            id
+            username
+            email
+            full_name
+            role
+            is_active
+          }
+        }
+      `);
+      setUsers(res.users || []);
     } catch { setUsers([]); }
     setLoading(false);
   }, []);
@@ -29,14 +40,25 @@ export default function UsersSection() {
 
   const handleUpdate = async (data: any) => {
     try {
-      await api(`/users/${editUser.id}`, {
-        method: 'PATCH',
-        body: JSON.stringify(data),
+      await graphqlQuery(`
+        mutation UpdateUser($id: String!, $input: UpdateUserInput!) {
+          updateUser(id: $id, input: $input) {
+            id
+          }
+        }
+      `, {
+        id: editUser.id,
+        input: {
+          role: data.role,
+          is_active: data.is_active
+        }
       });
-      showToast('Cập nhật thông tin độc giả thành công!', 'success');
+      setUsers((prev) => prev.map((u) =>
+        u.id === editUser.id ? { ...u, role: data.role, is_active: data.is_active } : u
+      ));
+      showToast('Cập nhật thành công!', 'success');
       setEditUser(null);
-      fetchUsers();
-    } catch { showToast('Lỗi khi cập nhật', 'error'); }
+    } catch (e: any) { showToast(e.message || 'Lỗi khi cập nhật', 'error'); }
   };
 
   return (
