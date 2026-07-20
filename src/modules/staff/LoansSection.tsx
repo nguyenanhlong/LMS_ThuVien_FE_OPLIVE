@@ -93,10 +93,10 @@ export default function LoansSection() {
     }
   };
 
-  const handleReturnDetail = async (detailId: string, lostQty: number) => {
+  const handleReturnDetail = async (detailId: string, returnQty: number, lostQty: number) => {
     setSubmitting(true);
     try {
-      await returnLoanDetailApi(detailId, lostQty);
+      await returnLoanDetailApi(detailId, { return_quantity: returnQty, lost_quantity: lostQty });
       showToast('Đã thu hồi sách thành công!', 'success');
       const updated = await getLoanByIdApi(returnModal.id);
       const mapped = mapLoan(updated);

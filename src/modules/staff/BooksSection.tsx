@@ -1,20 +1,23 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { getBooksApi, createBookApi, updateBookApi, deleteBookApi, getSubCategoriesApi } from '@/lib/api';
+import { getBooksApi, createBookApi, updateBookApi, deleteBookApi, getCategoriesApi, getSubCategoriesApi, uploadBookImageApi } from '@/lib/api';
 import { mapBook } from '@/utils/mappers';
 import BookTable from '@/components/books/BookTable';
 import BookModal from '@/components/books/BookModal';
 import Toast from '@/components/ui/Toast';
+import Pagination from '@/components/ui/Pagination';
 
 
 export default function BooksSection() {
   const [books, setBooks] = useState<any[]>([]);
-  const [subCategories, setSubCategories] = useState<any[]>([]);
-  const [selectedSubCat, setSelectedSubCat] = useState('');
+  const [categories, setCategories] = useState<any[]>([]);
+  const [selectedCatId, setSelectedCatId] = useState('');
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [bookModal, setBookModal] = useState<boolean | any>(false);
   const [toast, setToast] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
@@ -26,24 +29,31 @@ export default function BooksSection() {
   useEffect(() => {
     (async () => {
       try {
-        const data = await getSubCategoriesApi();
-        setSubCategories(Array.isArray(data) ? data : (data as any)?.items || []);
-      } catch { setSubCategories([]); }
+        const data = await getCategoriesApi();
+        setCategories(Array.isArray(data) ? data : (data as any)?.items || []);
+      } catch { setCategories([]); }
     })();
   }, []);
 
   const fetchBooks = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await getBooksApi({
-        keyword: searchTerm || undefined,
-        sub_category_id: selectedSubCat ? Number(selectedSubCat) : undefined,
-        pageSize: 100,
-      });
+      const params: any = { keyword: searchTerm || undefined, page, pageSize: 4 };
+      if (selectedCatId) {
+        const subs = await getSubCategoriesApi(Number(selectedCatId));
+        const list = Array.isArray(subs) ? subs : (subs as any)?.items || [];
+        if (list.length > 0) params.sub_category_id = Number(list[0].id);
+      }
+      const data = await getBooksApi(params);
       setBooks((data.items || []).map(mapBook));
+      setTotalPages(data.totalPages || 1);
     } catch (e: any) { setBooks([]); showToast(e.message || 'Lỗi khi tải danh sách sách', 'error'); }
     setLoading(false);
-  }, [searchTerm, selectedSubCat]);
+  }, [searchTerm, selectedCatId, page]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchTerm, selectedCatId]);
 
   useEffect(() => {
     const t = setTimeout(fetchBooks, 300);
@@ -53,7 +63,10 @@ export default function BooksSection() {
   const handleAdd = async (payload: any) => {
     setSubmitting(true);
     try {
-      await createBookApi(payload);
+      const { _file, image_url, ...data } = payload;
+      const res = await createBookApi(data);
+      const newId = res?.createBook?.id;
+      if (_file && newId) { await uploadBookImageApi(newId, _file); }
       showToast('Thêm đầu sách mới thành công!', 'success');
       setBookModal(false); fetchBooks();
     } catch (e: any) { showToast(e.message || 'Lỗi khi thêm sách', 'error'); }
@@ -63,7 +76,9 @@ export default function BooksSection() {
   const handleUpdate = async (payload: any) => {
     setSubmitting(true);
     try {
-      await updateBookApi(bookModal.id, payload);
+      const { _file, image_url, ...data } = payload;
+      await updateBookApi(bookModal.id, data);
+      if (_file) { await uploadBookImageApi(bookModal.id, _file); }
       showToast('Cập nhật thông tin sách thành công!', 'success');
       setBookModal(false); fetchBooks();
     } catch (e: any) { showToast(e.message || 'Lỗi khi cập nhật sách', 'error'); }
@@ -92,12 +107,12 @@ export default function BooksSection() {
         <select
           className="form-control"
           style={{ maxWidth: 240, background: 'var(--bg-secondary)' }}
-          value={selectedSubCat}
-          onChange={(e) => setSelectedSubCat(e.target.value)}
+          value={selectedCatId}
+          onChange={(e) => setSelectedCatId(e.target.value)}
         >
           <option value="">Tất cả thể loại</option>
-          {subCategories.map((sc: any) => (
-            <option key={sc.id} value={sc.id}>{sc.name}</option>
+          {categories.map((c: any) => (
+            <option key={c.id} value={c.id}>{c.name}</option>
           ))}
         </select>
       </div>
@@ -109,6 +124,8 @@ export default function BooksSection() {
         onDelete={handleDelete}
         onAdd={() => setBookModal(true)}
       />
+
+      <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
 
       <BookModal
         open={!!bookModal}

@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { getRolePermissionsByRoleApi, updateRolePermissionsApi } from '@/lib/api';
+import { getRolePermissionsByRoleApi, updateRolePermissionsApi, setCachedPermissions } from '@/lib/api';
 import Toast from '@/components/ui/Toast';
 
-const ROLES = ['ADMIN', 'LIBRARIAN', 'MEMBER'];
+const ROLES = ['LIBRARIAN', 'MEMBER'];
 
 const PERMISSION_GROUPS: Record<string, { key: string; label: string }[]> = {
   Sách: [
@@ -80,10 +80,11 @@ export default function RolePermissionsSection() {
     };
     try {
       await trySave();
+      setCachedPermissions(selectedRole, Array.from(permissions));
       showToast('Cập nhật phân quyền thành công!', 'success');
     } catch (e: any) {
       if (e.message?.includes('duplicate key')) {
-        try { await new Promise(r => setTimeout(r, 300)); await trySave(); showToast('Cập nhật phân quyền thành công!', 'success'); }
+        try { await new Promise(r => setTimeout(r, 300)); await trySave(); setCachedPermissions(selectedRole, Array.from(permissions)); showToast('Cập nhật phân quyền thành công!', 'success'); }
         catch { showToast('Lỗi đồng bộ dữ liệu, vui lòng thử lại', 'error'); }
       } else { showToast(e.message || 'Lỗi khi cập nhật', 'error'); }
     }

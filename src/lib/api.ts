@@ -1,4 +1,4 @@
-export const API_BASE = 'http://localhost:3000';
+export const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
 function getToken() {
   if (typeof window === 'undefined') return null;
@@ -100,13 +100,13 @@ const BOOK_FIELDS = `
   id title isbn author image_url publisher publisher_year description
   total_quantity borrowed_quantity max_borrow_days
   deposit_amount fine_per_day replacement_cost fee_per_day fee_per_week fee_per_month
-  is_active sub_category_id sub_category { id name }
+  is_active sub_category_id sub_category { id name category { id name } }
 `;
 
-export async function getBooksApi(params?: { keyword?: string; sub_category_id?: number; author?: string; is_active?: boolean; pageSize?: number }) {
+export async function getBooksApi(params?: { keyword?: string; category_id?: number; sub_category_id?: number; author?: string; is_active?: boolean; page?: number; pageSize?: number }) {
   const data = await gql<{ books: any }>(
     `query Books($query: GetBooksInput) { books(query: $query) { pageNumber pageSize totalItems totalPages items { ${BOOK_FIELDS} } } }`,
-    { query: { keyword: params?.keyword, sub_category_id: params?.sub_category_id, author: params?.author, is_active: params?.is_active, pageSize: params?.pageSize ?? 100 } },
+    { query: { keyword: params?.keyword, category_id: params?.category_id, sub_category_id: params?.sub_category_id, author: params?.author, is_active: params?.is_active, page: params?.page, pageSize: params?.pageSize ?? 100 } },
   );
   return data.books;
 }
@@ -117,6 +117,36 @@ export async function getBookApi(id: string | number) {
     { id },
   );
   return data.book;
+}
+
+export async function uploadBookImageApi(id: string | number, file: File) {
+  const query = `mutation($id: ID!, $file: Upload!) { updateBookImage(id: $id, image: $file) { id image_url } }`;
+  const variables = { id: String(id), file: null };
+  const map = { '0': ['variables.file'] };
+  const form = new FormData();
+  form.append('operations', JSON.stringify({ query, variables }));
+  form.append('map', JSON.stringify(map));
+  form.append('0', file);
+  const token = getToken();
+  const res = await fetch(`${API_BASE}/graphql`, {
+    method: 'POST',
+    headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), 'apollo-require-preflight': 'true' },
+    body: form,
+  });
+  const json = await res.json();
+  if (json.errors) throw new Error(json.errors[0].message || 'Upload failed');
+  return json.data?.updateBookImage;
+}
+
+export function getCachedPermissions(role: string): string[] {
+  if (typeof window === 'undefined') return [];
+  try { return JSON.parse(localStorage.getItem(`permissions_${role}`) || '[]'); }
+  catch { return []; }
+}
+
+export function setCachedPermissions(role: string, perms: string[]) {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(`permissions_${role}`, JSON.stringify(perms));
 }
 
 export async function createBookApi(data: any) {
@@ -153,6 +183,7 @@ const LOAN_FIELDS = `
     returned_quantity lost_quantity remaining_quantity
     borrow_days due_date completed_at status
     deposit_amount rental_fee fine_amount lost_fee deposit_refund_amount extra_payment_amount
+    returned_histories { id return_date return_quantity lost_quantity late_days fine_amount lost_fee deposit_refund_amount extra_payment_amount note }
   }
 `;
 
@@ -196,13 +227,10 @@ export async function borrowingLoanApi(id: string | number) {
   return data.payAndBorrow;
 }
 
-// Lưu ý: backend yêu cầu input.return_quantity (bắt buộc) chứ không chỉ lostQuantity —
-// chỗ gọi hàm này ở staff/LoansSection.tsx chưa truyền return_quantity nên sẽ lỗi runtime,
-// cần Chinh cập nhật UI trả sách để thu thêm số lượng trả trước khi gọi.
-export async function returnLoanDetailApi(detailId: string | number, lost_quantity = 0) {
+export async function returnLoanDetailApi(detailId: string | number, input: { return_quantity: number; lost_quantity?: number; note?: string }) {
   const data = await gql<{ returnLoanDetail: boolean }>(
     `mutation ReturnLoanDetail($detailId: ID!, $input: ReturnDetailInput!) { returnLoanDetail(detailId: $detailId, input: $input) }`,
-    { detailId: String(detailId), input: { return_quantity: 0, lost_quantity } },
+    { detailId: String(detailId), input },
   );
   return data.returnLoanDetail;
 }

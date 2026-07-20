@@ -3,10 +3,17 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getCategoriesApi, createCategoryApi, updateCategoryApi, deleteCategoryApi } from '@/lib/api';
 import Toast from '@/components/ui/Toast';
+import Pagination from '@/components/ui/Pagination';
 
-export default function CategoriesSection() {
+export default function CategoriesSection({ permissions }: { permissions?: string[] }) {
+  const perms = permissions || [];
+  const canCreate = perms.includes('CATEGORY_CREATE');
+  const canUpdate = perms.includes('CATEGORY_UPDATE');
+  const canDelete = perms.includes('CATEGORY_DELETE');
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [page, setPage] = useState(1);
+  const pageSize = 5;
   const [modal, setModal] = useState<{ type: 'add' | 'edit'; data?: any } | null>(null);
   const [name, setName] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -22,6 +29,7 @@ export default function CategoriesSection() {
     try {
       const data = await getCategoriesApi();
       setCategories(Array.isArray(data) ? data : []);
+      setPage(1);
     } catch { setCategories([]); }
     setLoading(false);
   }, []);
@@ -49,6 +57,9 @@ export default function CategoriesSection() {
     setSubmitting(false);
   };
 
+  const totalPages = Math.max(1, Math.ceil(categories.length / pageSize));
+  const paginatedCategories = categories.slice((page - 1) * pageSize, page * pageSize);
+
   const handleDelete = async (cat: any) => {
     const count = cat.sub_categories?.length || 0;
     if (count > 0) {
@@ -67,7 +78,7 @@ export default function CategoriesSection() {
     <div>
       <div className="manager-header-actions">
         <h2 className="section-title">Danh Sách Danh Mục</h2>
-        <button onClick={openAdd} className="btn btn-primary">+ Thêm Danh Mục</button>
+        {canCreate && <button onClick={openAdd} className="btn btn-primary">+ Thêm Danh Mục</button>}
       </div>
 
       {loading ? (
@@ -82,25 +93,29 @@ export default function CategoriesSection() {
                 <th>ID</th>
                 <th>Tên Danh Mục</th>
                 <th>Số Danh Mục Con</th>
-                <th>Hành Động</th>
+                {(canUpdate || canDelete) && <th>Hành Động</th>}
               </tr>
             </thead>
             <tbody>
-              {categories.map((cat: any) => (
+              {paginatedCategories.map((cat: any) => (
                 <tr key={cat.id}>
                   <td>{cat.id}</td>
                   <td><span style={{ fontWeight: 600 }}>{cat.name}</span></td>
                   <td><span className="badge badge-info">{cat.sub_categories?.length || 0}</span></td>
-                  <td style={{ display: 'flex', gap: 8 }}>
-                    <button onClick={() => openEdit(cat)} className="btn btn-edit">Sửa</button>
-                    <button onClick={() => handleDelete(cat)} className="btn btn-danger">Xoá</button>
-                  </td>
+                  {(canUpdate || canDelete) && (
+                    <td style={{ display: 'flex', gap: 8 }}>
+                      {canUpdate && <button onClick={() => openEdit(cat)} className="btn btn-edit">Sửa</button>}
+                      {canDelete && <button onClick={() => handleDelete(cat)} className="btn btn-danger">Xoá</button>}
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       )}
+
+      {!loading && <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />}
 
       {modal && (
         <div className="modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) setModal(null); }}>

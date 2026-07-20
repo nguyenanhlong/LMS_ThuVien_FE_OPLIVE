@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { CartProvider, useCart } from '@/context/CartContext';
 import { getLoansApi } from '@/lib/api';
@@ -11,6 +11,7 @@ import NotificationBell from '@/components/notifications/NotificationBell';
 import BooksSection from './BooksSection';
 import LoansSection from './LoansSection';
 import CartSection from './CartSection';
+import AuthModal from '@/components/auth/AuthModal';
 
 type Section = 'books' | 'cart' | 'loans';
 type NavKey = 'home' | 'search' | 'category' | 'recommend' | 'cart' | 'shelf';
@@ -36,6 +37,7 @@ function MemberModuleInner() {
   const [pendingAnchor, setPendingAnchor] = useState<string | null>(null);
   const [activeLoanCount, setActiveLoanCount] = useState(0);
   const [activeNavKey, setActiveNavKey] = useState<NavKey>('home');
+  const [showAuth, setShowAuth] = useState(false);
 
   const sections: Record<Section, string> = { books: 'Tra Cứu Sách', cart: 'Giỏ Hàng Của Tôi', loans: 'Phiếu Mượn Của Tôi' };
 
@@ -75,9 +77,14 @@ function MemberModuleInner() {
   };
 
   const handleGoToLoans = () => {
+    if (!user) { setShowAuth(true); return; }
     setSection('loans');
     setActiveNavKey('shelf');
   };
+
+  const handleRequireAuth = useCallback(() => {
+    setShowAuth(true);
+  }, []);
 
   const handleSelectCategory = (category: string) => {
     setSelectedCategory(category);
@@ -110,11 +117,12 @@ function MemberModuleInner() {
       <Header
         role="USER"
         user={user}
-        onLogout={logout}
+        onLogout={user ? logout : undefined}
+        onLoginRequest={() => setShowAuth(true)}
         navItems={navItems}
         searchTerm={searchTerm}
         onSearchChange={(v) => { setSearchTerm(v); setSection('books'); setActiveNavKey('search'); }}
-        extraActions={user && <NotificationBell />}
+        extraActions={user ? <NotificationBell /> : undefined}
       />
 
       <main className="main-content container" style={{ paddingTop: '24px' }}>
@@ -129,12 +137,15 @@ function MemberModuleInner() {
           <CartSection
             onLoanCreated={() => setLoanRefreshKey((k) => k + 1)}
             onGoToLoans={handleGoToLoans}
+            onRequireAuth={handleRequireAuth}
           />
         )}
         {section === 'loans' && <LoansSection key={loanRefreshKey} user={user} />}
       </main>
 
       <Footer />
+
+      {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
     </div>
   );
 }
