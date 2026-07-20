@@ -1,12 +1,14 @@
 'use client';
 
 import { useState } from 'react';
+import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
 import { createLoanApi } from '@/lib/api';
 import { calculateRentalFee } from '@/utils/mappers';
 import Toast from '@/components/ui/Toast';
 
-export default function CartSection({ onLoanCreated, onGoToLoans }: { onLoanCreated: () => void; onGoToLoans: () => void }) {
+export default function CartSection({ onLoanCreated, onGoToLoans, onRequireAuth }: { onLoanCreated: () => void; onGoToLoans: () => void; onRequireAuth: () => void }) {
+  const { user } = useAuth();
   const { items, removeItem, updateItem, clearSelected } = useCart();
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -22,6 +24,7 @@ export default function CartSection({ onLoanCreated, onGoToLoans }: { onLoanCrea
   const totalFee = selectedItems.reduce((sum, i) => sum + calculateRentalFee(i.borrowDays, i.feePerDay, i.feePerWeek, i.feePerMonth) * i.quantity, 0);
 
   const handleSubmit = async () => {
+    if (!user) { onRequireAuth(); return; }
     if (!selectedItems.length) { showToast('Vui lòng tick chọn ít nhất 1 cuốn sách', 'error'); return; }
 
     const newErrors: Record<string, string> = {};
