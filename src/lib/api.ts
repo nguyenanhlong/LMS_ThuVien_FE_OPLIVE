@@ -343,3 +343,27 @@ export async function markNotificationsReadApi(ids: (string | number)[]) {
   );
   return data.markNotificationsAsRead;
 }
+
+export async function verifyEmailApi(token: string) {
+  const data = await gql<{ verifyEmail: { message: string } }>(
+    `mutation VerifyEmail($input: VerifyEmailInput!) { verifyEmail(input: $input) { message } }`,
+    { input: { token } },
+  );
+  return data.verifyEmail;
+}
+
+export async function resendVerificationEmailApi(email: string) {
+  const data = await gql<{ resendVerificationEmail: { message: string } }>(
+    `mutation ResendVerificationEmail($input: ResendVerificationInput!) { resendVerificationEmail(input: $input) { message } }`,
+    { input: { email } },
+  );
+  return data.resendVerificationEmail;
+}
+
+export async function updateMyProfileApi(data: { full_name?: string; email?: string }) {
+  const result = await gql<{ updateMyProfile: any }>(
+    `mutation UpdateMyProfile($input: UpdateProfileInput!) { updateMyProfile(input: $input) { id full_name email } }`,
+    { input: data },
+  );
+  return result.updateMyProfile;
+}

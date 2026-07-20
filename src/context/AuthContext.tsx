@@ -8,6 +8,7 @@ interface UserInfo {
   email: string;
   full_name: string;
   role: string;
+  is_email_verified?: boolean;
 }
 
 interface AuthContextType {
@@ -39,6 +40,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           role: payload.role,
           username: payload.username || '',
           full_name: payload.full_name || payload.email,
+          is_email_verified: payload.is_email_verified,
         });
       } catch {
         clearTokens();
@@ -56,6 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       role: payload.role,
       username: payload.username || '',
       full_name: payload.full_name || payload.email,
+      is_email_verified: payload.is_email_verified,
     });
   }, []);
 
