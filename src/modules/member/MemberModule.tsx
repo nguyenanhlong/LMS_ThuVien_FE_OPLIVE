@@ -2,23 +2,34 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { graphqlQuery } from '@/lib/api';
+import { CartProvider, useCart } from '@/context/CartContext';
+import { getLoansApi } from '@/lib/api';
 import Header, { HeaderNavItem } from '@/components/layout/Header';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import NotificationBell from '@/components/notifications/NotificationBell';
 import BooksSection from './BooksSection';
 import LoansSection from './LoansSection';
+import CartSection from './CartSection';
 import AuthModal from '@/components/auth/AuthModal';
 
-type Section = 'books' | 'loans';
-type NavKey = 'home' | 'search' | 'category' | 'recommend' | 'shelf';
+type Section = 'books' | 'cart' | 'loans';
+type NavKey = 'home' | 'search' | 'category' | 'recommend' | 'cart' | 'shelf';
 
 const ACTIVE_LOAN_STATUSES = ['PENDING', 'PENDING_PAYMENT', 'BORROWING'];
 const CATEGORIES = ['Tất cả', 'Kỹ năng sống', 'Tiểu thuyết', 'Khoa học', 'Tài chính'];
 
 export default function MemberModule() {
+  return (
+    <CartProvider>
+      <MemberModuleInner />
+    </CartProvider>
+  );
+}
+
+function MemberModuleInner() {
   const { user, logout } = useAuth();
+  const { items: cartItems } = useCart();
   const [section, setSection] = useState<Section>('books');
   const [loanRefreshKey, setLoanRefreshKey] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
@@ -28,22 +39,13 @@ export default function MemberModule() {
   const [activeNavKey, setActiveNavKey] = useState<NavKey>('home');
   const [showAuth, setShowAuth] = useState(false);
 
-  const sections: Record<Section, string> = { books: 'Tra Cứu Sách', loans: 'Phiếu Mượn Của Tôi' };
+  const sections: Record<Section, string> = { books: 'Tra Cứu Sách', cart: 'Giỏ Hàng Của Tôi', loans: 'Phiếu Mượn Của Tôi' };
 
   useEffect(() => {
     if (!user) return;
-    graphqlQuery<any>(`
-      query GetLoans($query: GetLoansInput) {
-        loans(query: $query) {
-          items {
-            id
-            status
-          }
-        }
-      }
-    `, { query: { user_id: user.id, pageSize: 100 } })
+    getLoansApi()
       .then((data) => {
-        const items = data.loans?.items || [];
+        const items = data.items || [];
         setActiveLoanCount(items.filter((l: any) => ACTIVE_LOAN_STATUSES.includes(l.status)).length);
       })
       .catch(() => {});
@@ -67,6 +69,11 @@ export default function MemberModule() {
     setSection('books');
     setActiveNavKey('recommend');
     setPendingAnchor('recommended-books');
+  };
+
+  const handleGoToCart = () => {
+    setSection('cart');
+    setActiveNavKey('cart');
   };
 
   const handleGoToLoans = () => {
@@ -101,6 +108,7 @@ export default function MemberModule() {
       })),
     },
     { key: 'recommend', label: 'Gợi ý', active: activeNavKey === 'recommend', onClick: handleGoToRecommend },
+    { key: 'cart', label: 'Giỏ hàng', active: activeNavKey === 'cart', badge: cartItems.length, onClick: handleGoToCart },
     { key: 'shelf', label: 'Kệ sách', active: activeNavKey === 'shelf', badge: activeLoanCount, onClick: handleGoToLoans },
   ];
 
@@ -114,17 +122,21 @@ export default function MemberModule() {
         navItems={navItems}
         searchTerm={searchTerm}
         onSearchChange={(v) => { setSearchTerm(v); setSection('books'); setActiveNavKey('search'); }}
-        extraActions={user ? <NotificationBell userId={user.id} /> : undefined}
+        extraActions={user ? <NotificationBell /> : undefined}
       />
 
       <main className="main-content container" style={{ paddingTop: '24px' }}>
         <Navbar title={sections[section]} role="USER" />
         {section === 'books' && (
           <BooksSection
-            user={user}
             searchTerm={searchTerm}
             selectedCategory={selectedCategory}
+          />
+        )}
+        {section === 'cart' && (
+          <CartSection
             onLoanCreated={() => setLoanRefreshKey((k) => k + 1)}
+            onGoToLoans={handleGoToLoans}
             onRequireAuth={handleRequireAuth}
           />
         )}

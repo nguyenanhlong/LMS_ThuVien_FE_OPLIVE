@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { cancelLoanApi, getLoansApi } from '@/lib/api';
+import { getLoansApi, cancelLoanApi } from '@/lib/api';
 import { mapMemberLoan } from '@/utils/mappers';
 import { LoanStatusBadge, LoanDetailStatusBadge, canCancelLoan } from '@/components/loans/LoanStatusBadge';
 import CancelLoanModal from '@/components/loans/CancelLoanModal';
@@ -21,14 +21,14 @@ export default function LoansSection({ user }: any) {
   const fetchLoans = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await getLoansApi({ user_id: user.id, pageSize: 100 });
+      const data = await getLoansApi();
       setLoans((data.items || []).map(mapMemberLoan));
     } catch {
       setLoans([]);
       showToast('Không tải được danh sách phiếu mượn', 'error');
     }
     setLoading(false);
-  }, [user.id, showToast]);
+  }, [showToast]);
 
   useEffect(() => { fetchLoans(); }, [fetchLoans]);
 
@@ -71,8 +71,9 @@ export default function LoansSection({ user }: any) {
                       <span className="loan-book-title">{bk.title}</span>
                       <span className="loan-book-meta">
                         SL: {bk.quantity} · {bk.borrowDays} ngày
+                        {bk.returnedQuantity > 0 && bk.returnedQuantity < bk.quantity && ` · Đã trả ${bk.returnedQuantity}/${bk.quantity}`}
                         {bk.dueDate && ` · Hạn trả: ${bk.dueDate}`}
-                        {bk.returnDate && ` · Đã trả: ${bk.returnDate}`}
+                        {bk.returnDate && ` · Hoàn tất: ${bk.returnDate}`}
                       </span>
                     </div>
                     <LoanDetailStatusBadge status={bk.status} />

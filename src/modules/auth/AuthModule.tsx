@@ -96,7 +96,6 @@ export default function AuthModule() {
               <label>Mật khẩu</label>
               <input className="form-control" type="password" placeholder="Ít nhất 8 ký tự, có chữ hoa, chữ thường, số và ký tự đặc biệt" value={regData.password} onChange={(e) => setRegData({ ...regData, password: e.target.value })} />
             </div>
-
             <button type="submit" className="btn btn-primary btn-full" disabled={submitting} style={{ marginTop: '8px' }}>
               {submitting ? 'Đang đăng ký...' : 'Đăng Ký'}
             </button>
