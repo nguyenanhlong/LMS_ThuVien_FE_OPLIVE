@@ -4,11 +4,12 @@ import { useState, useEffect, useCallback } from 'react';
 import { getCategoriesApi, getSubCategoriesApi, createSubCategoryApi, updateSubCategoryApi, deleteSubCategoryApi } from '@/lib/api';
 import Toast from '@/components/ui/Toast';
 
-export default function SubCategoriesSection({ permissions }: { permissions?: string[] }) {
+export default function SubCategoriesSection({ permissions, userRole }: { permissions?: string[]; userRole?: string }) {
+  const isAdmin = userRole === 'ADMIN';
   const perms = permissions || [];
-  const canCreate = perms.includes('SUB_CATEGORY_CREATE');
-  const canUpdate = perms.includes('SUB_CATEGORY_UPDATE');
-  const canDelete = perms.includes('SUB_CATEGORY_DELETE');
+  const canCreate = isAdmin || perms.includes('SUB_CATEGORY_CREATE');
+  const canUpdate = isAdmin || perms.includes('SUB_CATEGORY_UPDATE');
+  const canDelete = isAdmin || perms.includes('SUB_CATEGORY_DELETE');
   const [categories, setCategories] = useState<any[]>([]);
   const [selectedCat, setSelectedCat] = useState<string>('');
   const [subCategories, setSubCategories] = useState<any[]>([]);
