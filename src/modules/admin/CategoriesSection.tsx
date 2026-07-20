@@ -5,16 +5,18 @@ import { getCategoriesApi, createCategoryApi, updateCategoryApi, deleteCategoryA
 import Toast from '@/components/ui/Toast';
 import Pagination from '@/components/ui/Pagination';
 
-export default function CategoriesSection({ permissions }: { permissions?: string[] }) {
+export default function CategoriesSection({ permissions, userRole }: { permissions?: string[]; userRole?: string }) {
+  const isAdmin = userRole === 'ADMIN';
   const perms = permissions || [];
-  const canCreate = perms.includes('CATEGORY_CREATE');
-  const canUpdate = perms.includes('CATEGORY_UPDATE');
-  const canDelete = perms.includes('CATEGORY_DELETE');
+  const canCreate = isAdmin || perms.includes('CATEGORY_CREATE');
+  const canUpdate = isAdmin || perms.includes('CATEGORY_UPDATE');
+  const canDelete = isAdmin || perms.includes('CATEGORY_DELETE');
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
   const pageSize = 5;
   const [modal, setModal] = useState<{ type: 'add' | 'edit'; data?: any } | null>(null);
+  const [detailModal, setDetailModal] = useState<any>(null);
   const [name, setName] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
@@ -93,7 +95,7 @@ export default function CategoriesSection({ permissions }: { permissions?: strin
                 <th>ID</th>
                 <th>Tên Danh Mục</th>
                 <th>Số Danh Mục Con</th>
-                {(canUpdate || canDelete) && <th>Hành Động</th>}
+                <th>Hành Động</th>
               </tr>
             </thead>
             <tbody>
@@ -102,12 +104,11 @@ export default function CategoriesSection({ permissions }: { permissions?: strin
                   <td>{cat.id}</td>
                   <td><span style={{ fontWeight: 600 }}>{cat.name}</span></td>
                   <td><span className="badge badge-info">{cat.sub_categories?.length || 0}</span></td>
-                  {(canUpdate || canDelete) && (
-                    <td style={{ display: 'flex', gap: 8 }}>
-                      {canUpdate && <button onClick={() => openEdit(cat)} className="btn btn-edit">Sửa</button>}
-                      {canDelete && <button onClick={() => handleDelete(cat)} className="btn btn-danger">Xoá</button>}
-                    </td>
-                  )}
+                  <td style={{ display: 'flex', gap: 8 }}>
+                    <button onClick={() => setDetailModal(cat)} className="btn btn-secondary">Xem Chi Tiết</button>
+                    {canUpdate && <button onClick={() => openEdit(cat)} className="btn btn-edit">Sửa</button>}
+                    {canDelete && <button onClick={() => handleDelete(cat)} className="btn btn-danger">Xoá</button>}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -143,6 +144,38 @@ export default function CategoriesSection({ permissions }: { permissions?: strin
       )}
 
       <Toast message={toast?.text || ''} type={toast?.type || 'success'} />
+
+      {detailModal && (
+        <div className="modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) setDetailModal(null); }}>
+          <div className="modal-content glass-panel">
+            <div className="modal-header">
+              <h3 className="modal-title">{detailModal.name}</h3>
+              <button onClick={() => setDetailModal(null)} className="modal-close">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4l8 8M12 4l-8 8" /></svg>
+              </button>
+            </div>
+            <div style={{ padding: '8px 0', maxHeight: '400px', overflowY: 'auto' }}>
+              {detailModal.sub_categories?.length > 0 ? (
+                detailModal.sub_categories.map((sc: any) => (
+                  <div key={sc.id} style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2">
+                      <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" />
+                    </svg>
+                    <span style={{ fontWeight: 500 }}>{sc.name}</span>
+                  </div>
+                ))
+              ) : (
+                <div className="empty-state" style={{ padding: '32px 0' }}>
+                  <p>Không có danh mục con nào</p>
+                </div>
+              )}
+            </div>
+            <div className="modal-actions">
+              <button onClick={() => setDetailModal(null)} className="btn btn-secondary">Đóng</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
