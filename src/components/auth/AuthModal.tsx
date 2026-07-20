@@ -2,13 +2,16 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { resendVerificationEmailApi } from '@/lib/api';
 import { CloseIcon } from '@/components/ui/icons';
 
 export default function AuthModal({ onClose }: { onClose: () => void }) {
   const { login, register, user } = useAuth();
   const [mode, setMode] = useState<'login' | 'register'>('login');
+  const [registeredEmail, setRegisteredEmail] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [resending, setResending] = useState(false);
 
   const [loginUser, setLoginUser] = useState('');
   const [loginPass, setLoginPass] = useState('');
@@ -26,7 +29,16 @@ export default function AuthModal({ onClose }: { onClose: () => void }) {
     setSubmitting(true);
     try {
       await login(loginUser, loginPass);
-    } catch (err: any) { setError(err.message || 'Đăng nhập thất bại'); }
+    } catch (err: any) {
+      const msg = err.message || 'Đăng nhập thất bại';
+      if (msg.toLowerCase().includes('verify your email')) {
+        setMode('login');
+        setLoginUser(loginUser);
+        setError('Tài khoản chưa xác thực email. Vui lòng kiểm tra email hoặc đăng ký lại.');
+      } else {
+        setError(msg);
+      }
+    }
     setSubmitting(false);
   };
 
@@ -38,14 +50,63 @@ export default function AuthModal({ onClose }: { onClose: () => void }) {
     setSubmitting(true);
     try {
       await register(regData);
-      setMode('login');
-      setLoginUser(username);
-      setError('Đăng ký thành công! Vui lòng đăng nhập.');
+      setRegisteredEmail(email);
     } catch (err: any) { setError(err.message || 'Đăng ký thất bại'); }
     setSubmitting(false);
   };
 
-  const toggleMode = () => { setMode(mode === 'login' ? 'register' : 'login'); setError(''); };
+  const handleResendVerification = async () => {
+    setResending(true);
+    try {
+      await resendVerificationEmailApi(registeredEmail);
+      setError('Email xác thực đã được gửi lại! Vui lòng kiểm tra hộp thư.');
+      setTimeout(() => setError(''), 5000);
+    } catch (err: any) {
+      setError(err.message || 'Gửi lại email thất bại');
+    }
+    setResending(false);
+  };
+
+  const toggleMode = () => { setMode(mode === 'login' ? 'register' : 'login'); setRegisteredEmail(''); setError(''); };
+
+  if (registeredEmail) {
+    return (
+      <div className="modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+        <div className="modal-content glass-panel" style={{ maxWidth: '420px', padding: '40px' }}>
+          <button onClick={onClose} className="modal-close" style={{ position: 'absolute', top: '16px', right: '16px' }}>
+            <CloseIcon />
+          </button>
+
+          <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+            <div style={{ fontSize: '3rem', marginBottom: '12px' }}>📧</div>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 800 }}>Xác Thực Email</h2>
+            <p style={{ color: 'var(--text-muted)', marginTop: '12px', lineHeight: '1.6' }}>
+              Chúng tôi đã gửi email xác thực đến <strong style={{ color: 'var(--text-primary)' }}>{registeredEmail}</strong>.
+              Vui lòng kiểm tra hộp thư và nhấp vào liên kết để kích hoạt tài khoản.
+            </p>
+          </div>
+
+          {error && (
+            <div style={{ padding: '12px', borderRadius: '8px', marginBottom: '16px', background: error.includes('gửi lại') ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)', color: error.includes('gửi lại') ? 'var(--success)' : 'var(--error)', fontSize: '0.875rem', textAlign: 'center' }}>
+              {error}
+            </div>
+          )}
+
+          <div style={{ textAlign: 'center' }}>
+            <button onClick={handleResendVerification} className="btn btn-secondary" disabled={resending} style={{ marginBottom: '12px' }}>
+              {resending ? 'Đang gửi...' : 'Gửi lại email xác thực'}
+            </button>
+            <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
+              Đã xác thực?{' '}
+              <button onClick={() => { setRegisteredEmail(''); setMode('login'); setError(''); }} style={{ color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>
+                Đăng nhập
+              </button>
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
