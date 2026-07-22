@@ -65,7 +65,7 @@ function VerifyEmailContent() {
             <div style={{ fontSize: '3rem', marginBottom: '12px' }}>✅</div>
             <h2 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '12px' }}>Xác Thực Thành Công</h2>
             <p style={{ color: 'var(--text-secondary)', lineHeight: '1.6', marginBottom: '24px' }}>{message}</p>
-            <Link href="/" className="btn btn-primary" style={{ textDecoration: 'none', display: 'inline-block' }}>
+            <Link href="/?verified=true" className="btn btn-primary" style={{ textDecoration: 'none', display: 'inline-block' }}>
               Đăng Nhập Ngay
             </Link>
           </>

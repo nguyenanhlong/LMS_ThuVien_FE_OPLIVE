@@ -1,15 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { resendVerificationEmailApi } from '@/lib/api';
+import { resendVerificationEmailApi, forgotPasswordApi } from '@/lib/api';
 import { CloseIcon } from '@/components/ui/icons';
 
-export default function AuthModal({ onClose }: { onClose: () => void }) {
+export default function AuthModal({ onClose, initialMessage }: { onClose: () => void; initialMessage?: string }) {
   const { login, register, user } = useAuth();
-  const [mode, setMode] = useState<'login' | 'register'>('login');
+  const [mode, setMode] = useState<'login' | 'register' | 'forgot'>('login');
   const [registeredEmail, setRegisteredEmail] = useState('');
-  const [error, setError] = useState('');
+  const [error, setError] = useState(initialMessage || '');
   const [submitting, setSubmitting] = useState(false);
   const [resending, setResending] = useState(false);
 
@@ -17,10 +17,27 @@ export default function AuthModal({ onClose }: { onClose: () => void }) {
   const [loginPass, setLoginPass] = useState('');
 
   const [regData, setRegData] = useState({ username: '', full_name: '', email: '', password: '' });
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotSent, setForgotSent] = useState(false);
 
   useEffect(() => {
     if (user) onClose();
   }, [user, onClose]);
+
+  const regEmailRef = useRef(registeredEmail);
+  regEmailRef.current = registeredEmail;
+
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible' && regEmailRef.current) {
+        setRegisteredEmail('');
+        setMode('login');
+        setError('Email đã xác thực! Vui lòng đăng nhập.');
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,6 +82,20 @@ export default function AuthModal({ onClose }: { onClose: () => void }) {
       setError(err.message || 'Gửi lại email thất bại');
     }
     setResending(false);
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    if (!forgotEmail.trim()) { setError('Vui lòng nhập email'); return; }
+    setSubmitting(true);
+    try {
+      await forgotPasswordApi(forgotEmail.trim());
+      setForgotSent(true);
+    } catch (err: any) {
+      setError(err.message || 'Gửi yêu cầu thất bại');
+    }
+    setSubmitting(false);
   };
 
   const toggleMode = () => { setMode(mode === 'login' ? 'register' : 'login'); setRegisteredEmail(''); setError(''); };
@@ -118,7 +149,7 @@ export default function AuthModal({ onClose }: { onClose: () => void }) {
         <div style={{ textAlign: 'center', marginBottom: '24px' }}>
           <h2 style={{ fontSize: '1.5rem', fontWeight: 800 }}>THƯ VIỆN <span className="gradient-text">SỐ</span></h2>
           <p style={{ color: 'var(--text-muted)', marginTop: '8px' }}>
-            {mode === 'login' ? 'Đăng nhập để mượn sách' : 'Tạo tài khoản mới'}
+            {mode === 'login' ? 'Đăng nhập để mượn sách' : mode === 'forgot' ? 'Đặt lại mật khẩu' : 'Tạo tài khoản mới'}
           </p>
         </div>
 
@@ -141,12 +172,45 @@ export default function AuthModal({ onClose }: { onClose: () => void }) {
             <button type="submit" className="btn btn-primary btn-full" disabled={submitting} style={{ marginTop: '8px' }}>
               {submitting ? 'Đang đăng nhập...' : 'Đăng Nhập'}
             </button>
-            <p style={{ textAlign: 'center', marginTop: '16px', fontSize: '0.875rem', color: 'var(--text-muted)' }}>
+            <p style={{ textAlign: 'center', marginTop: '8px', fontSize: '0.875rem' }}>
+              <button type="button" onClick={() => { setMode('forgot'); setError(''); }} style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>
+                Quên mật khẩu?
+              </button>
+            </p>
+            <p style={{ textAlign: 'center', marginTop: '4px', fontSize: '0.875rem', color: 'var(--text-muted)' }}>
               Chưa có tài khoản?{' '}
               <button type="button" onClick={toggleMode} style={{ color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>
                 Đăng ký
               </button>
             </p>
+          </form>
+        ) : mode === 'forgot' ? (
+          <form onSubmit={handleForgotPassword}>
+            <div className="form-group">
+              <label>Email</label>
+              <input className="form-control" type="email" placeholder="email@example.com" value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} autoFocus />
+            </div>
+            {forgotSent ? (
+              <div style={{ textAlign: 'center' }}>
+                <p style={{ color: 'var(--text-secondary)', lineHeight: '1.6', marginBottom: '16px' }}>
+                  Nếu email tồn tại, chúng tôi đã gửi link đặt lại mật khẩu. Vui lòng kiểm tra hộp thư.
+                </p>
+                <button type="button" onClick={() => { setMode('login'); setForgotEmail(''); setForgotSent(false); setError(''); }} className="btn btn-primary btn-full">
+                  Quay lại đăng nhập
+                </button>
+              </div>
+            ) : (
+              <>
+                <button type="submit" className="btn btn-primary btn-full" disabled={submitting} style={{ marginTop: '8px' }}>
+                  {submitting ? 'Đang gửi...' : 'Gửi yêu cầu đặt lại mật khẩu'}
+                </button>
+                <p style={{ textAlign: 'center', marginTop: '16px', fontSize: '0.875rem', color: 'var(--text-muted)' }}>
+                  <button type="button" onClick={() => { setMode('login'); setError(''); }} style={{ color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>
+                    Quay lại đăng nhập
+                  </button>
+                </p>
+              </>
+            )}
           </form>
         ) : (
           <form onSubmit={handleRegister}>
