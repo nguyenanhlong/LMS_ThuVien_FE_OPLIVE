@@ -367,3 +367,19 @@ export async function updateMyProfileApi(data: { full_name?: string; email?: str
   );
   return result.updateMyProfile;
 }
+
+export async function forgotPasswordApi(email: string) {
+  const data = await gql<{ forgotPassword: { message: string } }>(
+    `mutation ForgotPassword($input: ForgotPasswordInput!) { forgotPassword(input: $input) { message } }`,
+    { input: { email } },
+  );
+  return data.forgotPassword;
+}
+
+export async function resetPasswordApi(token: string, new_password: string, confirm_password: string) {
+  const data = await gql<{ resetPassword: { message: string } }>(
+    `mutation ResetPassword($input: ResetPasswordInput!) { resetPassword(input: $input) { message } }`,
+    { input: { token, new_password, confirm_password } },
+  );
+  return data.resetPassword;
+}
