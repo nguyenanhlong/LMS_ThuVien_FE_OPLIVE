@@ -16,6 +16,7 @@ const PERMISSION_GROUPS: Record<string, { key: string; label: string }[]> = {
   'Độc giả': [
     { key: 'USER_VIEW', label: 'Xem độc giả' },
     { key: 'USER_UPDATE_ROLE', label: 'Đổi vai trò' },
+    { key: 'USER_UPDATE_STATUS', label: 'Khoá/Mở tài khoản' },
   ],
   'Mượn trả': [
     { key: 'LOAN_VIEW', label: 'Xem phiếu mượn' },
@@ -37,8 +38,8 @@ const PERMISSION_GROUPS: Record<string, { key: string; label: string }[]> = {
     { key: 'SUB_CATEGORY_UPDATE', label: 'Sửa danh mục con' },
     { key: 'SUB_CATEGORY_DELETE', label: 'Xoá danh mục con' },
   ],
-  'Phân quyền': [
-    { key: 'PERMISSION_MANAGE', label: 'Quản lý phân quyền' },
+  'Dashboard': [
+    { key: 'DASHBOARD_VIEW', label: 'Xem thống kê' },
   ],
 };
 
