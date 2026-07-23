@@ -110,9 +110,12 @@ export function mapMemberLoan(l: any) {
       title: bk.title || 'Đầu sách đã bị xóa',
       author: bk.author || '',
       quantity: bk.quantity || 0,
+      returnedQuantity: Number(bk.returned_quantity ?? 0),
+      remainingQuantity: Number(bk.remaining_quantity ?? bk.quantity ?? 0),
+      lostQuantity: Number(bk.lost_quantity ?? 0),
       borrowDays: bk.borrow_days || 0,
       dueDate: bk.due_date ? new Date(bk.due_date).toLocaleDateString('vi-VN') : '',
-      returnDate: bk.return_date ? new Date(bk.return_date).toLocaleDateString('vi-VN') : '',
+      returnDate: bk.completed_at ? new Date(bk.completed_at).toLocaleDateString('vi-VN') : '',
       status: bk.status,
     })),
   };

@@ -7,7 +7,8 @@ import UserEditModal from '@/components/users/UserEditModal';
 import Toast from '@/components/ui/Toast';
 import Pagination from '@/components/ui/Pagination';
 
-export default function UsersSection({ permissions }: { permissions?: string[] }) {
+export default function UsersSection({ permissions, userRole }: { permissions?: string[]; userRole?: string }) {
+  const isAdmin = userRole === 'ADMIN';
   const { user: currentUser } = useAuth();
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -15,8 +16,8 @@ export default function UsersSection({ permissions }: { permissions?: string[] }
   const [totalPages, setTotalPages] = useState(1);
   const [editUser, setEditUser] = useState<any>(null);
   const [toast, setToast] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
-  const canEditRole = permissions?.includes('USER_UPDATE_ROLE');
-  const canEditStatus = permissions?.includes('USER_UPDATE_STATUS');
+  const canEditRole = isAdmin || permissions?.includes('USER_UPDATE_ROLE');
+  const canEditStatus = isAdmin || permissions?.includes('USER_UPDATE_STATUS');
   const canEdit = canEditRole || canEditStatus;
 
   const showToast = useCallback((text: string, type: 'success' | 'error' = 'success') => {

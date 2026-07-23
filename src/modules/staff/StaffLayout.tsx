@@ -63,7 +63,7 @@ export default function StaffLayout({ defaultSection, allowedSections, children 
 
         <main className="main-content container" style={{ paddingTop: '24px' }}>
           <Navbar title={sectionTitles[section]} role="MANAGER" />
-          {typeof children === 'function' ? children(section, permissions) : children}
+          {typeof children === 'function' ? children(section, permissions, user?.role) : children}
         </main>
       </div>
 

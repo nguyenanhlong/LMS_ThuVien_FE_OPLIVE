@@ -9,6 +9,7 @@ import { mapLoan } from '@/utils/mappers';
 import LoanTable, { LOAN_STATUS_MAP } from '@/components/loans/LoanTable';
 import LoanHistory from '@/components/loans/LoanHistory';
 import ReturnModal from '@/components/loans/ReturnModal';
+import CancelLoanModal from '@/components/loans/CancelLoanModal';
 import Toast from '@/components/ui/Toast';
 
 const FILTERS = ['ALL', 'PENDING', 'PENDING_PAYMENT', 'BORROWING', 'OVERDUE', 'COMPLETED', 'CANCELLED'];
@@ -18,6 +19,7 @@ export default function LoansSection() {
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [returnModal, setReturnModal] = useState<any>(null);
+  const [cancelLoanId, setCancelLoanId] = useState<string | null>(null); 
   const [filter, setFilter] = useState('ALL');
   const [toast, setToast] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
@@ -72,13 +74,17 @@ export default function LoansSection() {
     setSubmitting(false);
   };
 
-  const handleCancel = async (id: string) => {
-    const reason = window.prompt('Lý do hủy phiếu mượn:');
-    if (!reason) return;
+  const handleCancel = (id: string) => {
+    setCancelLoanId(id);
+  };
+
+  const handleConfirmCancel = async (reason: string) => {
+    if (!cancelLoanId) return;
     setSubmitting(true);
     try {
-      await cancelLoanApi(id, reason);
+      await cancelLoanApi(cancelLoanId, reason);
       showToast('Đã hủy phiếu mượn!', 'success');
+      setCancelLoanId(null);
       fetchLoans();
     } catch (e: any) { showToast(e.message || 'Lỗi khi hủy', 'error'); }
     setSubmitting(false);
@@ -155,6 +161,11 @@ export default function LoansSection() {
         onReturnDetail={handleReturnDetail}
         onCancel={() => setReturnModal(null)}
         loading={submitting}
+      />
+      <CancelLoanModal
+        loan={cancelLoanId ? { id: cancelLoanId } : null}
+        onClose={() => setCancelLoanId(null)}
+        onConfirm={handleConfirmCancel}
       />
       <Toast message={toast?.text || ''} type={toast?.type || 'success'} />
     </div>

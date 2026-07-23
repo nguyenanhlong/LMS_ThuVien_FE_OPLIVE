@@ -3,15 +3,12 @@
 import Link from 'next/link';
 import { ArrowRightIcon } from '@/components/ui/icons';
 import { getCover } from '@/lib/category-covers';
+import { useCart } from '@/context/CartContext';
 
-export default function BookCard({
-  book,
-  onBorrow,
-}: {
-  book: any;
-  onBorrow: (id: string, title: string) => void;
-}) {
+export default function BookCard({ book }: { book: any }) {
   const cover = getCover(book.category);
+  const { addItem, isInCart } = useCart();
+  const inCart = isInCart(book.id);
 
   return (
     <div className="book-card glass-panel">
@@ -30,8 +27,13 @@ export default function BookCard({
       </div>
       <div className="book-card-footer" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         {book.status === 'AVAILABLE' ? (
-          <button onClick={() => onBorrow(book.id, book.title)} className="btn btn-primary btn-full" id={`borrow-btn-${book.id}`}>
-            Mượn Sách
+          <button
+            onClick={() => addItem(book)}
+            className={`btn ${inCart ? 'btn-secondary' : 'btn-primary'} btn-full`}
+            disabled={inCart}
+            id={`add-to-cart-btn-${book.id}`}
+          >
+            {inCart ? 'Đã Có Trong Giỏ' : 'Thêm Vào Giỏ'}
           </button>
         ) : (
           <button className="btn btn-secondary btn-full" disabled style={{ opacity: 0.5, cursor: 'not-allowed' }}>
