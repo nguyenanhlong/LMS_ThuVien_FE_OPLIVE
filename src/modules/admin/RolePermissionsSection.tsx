@@ -104,11 +104,21 @@ export default function RolePermissionsSection() {
     setSaving(false);
   };
 
+  const PRIORITY = ['VIEW', 'CREATE', 'UPDATE', 'DELETE'];
   const grouped: Record<string, { key: string; label: string }[]> = {};
   for (const perm of allPermissions) {
     const group = getGroupKey(perm);
     if (!grouped[group]) grouped[group] = [];
     grouped[group].push({ key: perm, label: PERMISSION_LABELS[perm] || perm });
+  }
+  for (const group of Object.keys(grouped)) {
+    grouped[group].sort((a, b) => {
+      const aSuffix = a.key.substring(group.length + 1);
+      const bSuffix = b.key.substring(group.length + 1);
+      const ai = PRIORITY.indexOf(aSuffix);
+      const bi = PRIORITY.indexOf(bSuffix);
+      return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+    });
   }
 
   return (
