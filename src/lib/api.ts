@@ -383,3 +383,32 @@ export async function resetPasswordApi(token: string, new_password: string, conf
   );
   return data.resetPassword;
 }
+
+export async function getDashboardSummaryApi(input?: { from_date?: string; to_date?: string }) {
+  const data = await gql<{ dashboardSummary: any }>(
+    `query DashboardSummary($input: DashboardFilterInput) { dashboardSummary(input: $input) {
+      total_book_titles total_book_copies borrowed_book_copies available_book_copies
+      total_members pending_loans pending_payment_loans borrowing_loans
+      completed_loans cancelled_loans overdue_details
+      rental_revenue fine_revenue lost_book_revenue total_revenue holding_deposit
+    } }`,
+    { input },
+  );
+  return data.dashboardSummary;
+}
+
+export async function getDashboardLoanStatusApi(input?: { from_date?: string; to_date?: string }) {
+  const data = await gql<{ dashboardLoanStatusStatistics: any[] }>(
+    `query DashboardLoanStatus($input: DashboardFilterInput) { dashboardLoanStatusStatistics(input: $input) { status count } }`,
+    { input },
+  );
+  return data.dashboardLoanStatusStatistics;
+}
+
+export async function getDashboardTopBooksApi(limit?: number, input?: { from_date?: string; to_date?: string }) {
+  const data = await gql<{ dashboardTopBorrowedBooks: any[] }>(
+    `query DashboardTopBooks($limit: Int, $input: DashboardFilterInput) { dashboardTopBorrowedBooks(limit: $limit, input: $input) { book_id title author image_url borrowed_quantity } }`,
+    { limit, input },
+  );
+  return data.dashboardTopBorrowedBooks;
+}
