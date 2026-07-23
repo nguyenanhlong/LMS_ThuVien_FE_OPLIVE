@@ -1,51 +1,54 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { getRolePermissionsByRoleApi, updateRolePermissionsApi, setCachedPermissions } from '@/lib/api';
+import { getRolePermissionsApi, getRolePermissionsByRoleApi, updateRolePermissionsApi, setCachedPermissions } from '@/lib/api';
 import Toast from '@/components/ui/Toast';
 
 const ROLES = ['LIBRARIAN', 'MEMBER'];
 
-const PERMISSION_GROUPS: Record<string, { key: string; label: string }[]> = {
-  Sách: [
-    { key: 'BOOK_VIEW', label: 'Xem sách' },
-    { key: 'BOOK_CREATE', label: 'Thêm sách' },
-    { key: 'BOOK_UPDATE', label: 'Sửa sách' },
-    { key: 'BOOK_DELETE', label: 'Xoá sách' },
-  ],
-  'Độc giả': [
-    { key: 'USER_VIEW', label: 'Xem độc giả' },
-    { key: 'USER_UPDATE_ROLE', label: 'Đổi vai trò' },
-    { key: 'USER_UPDATE_STATUS', label: 'Khoá/Mở tài khoản' },
-  ],
-  'Mượn trả': [
-    { key: 'LOAN_VIEW', label: 'Xem phiếu mượn' },
-    { key: 'LOAN_CREATE', label: 'Tạo phiếu mượn' },
-    { key: 'LOAN_CONFIRM', label: 'Xác nhận' },
-    { key: 'LOAN_BORROWING', label: 'Cho mượn' },
-    { key: 'LOAN_DETAIL_RETURN', label: 'Nhận trả' },
-    { key: 'LOAN_CANCEL', label: 'Huỷ phiếu' },
-  ],
-  'Danh mục': [
-    { key: 'CATEGORY_VIEW', label: 'Xem danh mục' },
-    { key: 'CATEGORY_CREATE', label: 'Thêm danh mục' },
-    { key: 'CATEGORY_UPDATE', label: 'Sửa danh mục' },
-    { key: 'CATEGORY_DELETE', label: 'Xoá danh mục' },
-  ],
-  'Danh mục con': [
-    { key: 'SUB_CATEGORY_VIEW', label: 'Xem danh mục con' },
-    { key: 'SUB_CATEGORY_CREATE', label: 'Thêm danh mục con' },
-    { key: 'SUB_CATEGORY_UPDATE', label: 'Sửa danh mục con' },
-    { key: 'SUB_CATEGORY_DELETE', label: 'Xoá danh mục con' },
-  ],
-  'Dashboard': [
-    { key: 'DASHBOARD_VIEW', label: 'Xem thống kê' },
-  ],
+const GROUP_LABELS: Record<string, string> = {
+  BOOK: 'Sách',
+  USER: 'Độc giả',
+  LOAN: 'Mượn trả',
+  CATEGORY: 'Danh mục',
+  SUB_CATEGORY: 'Danh mục con',
+  DASHBOARD: 'Dashboard',
 };
+
+const PERMISSION_LABELS: Record<string, string> = {
+  BOOK_VIEW: 'Xem sách',
+  BOOK_CREATE: 'Thêm sách',
+  BOOK_UPDATE: 'Sửa sách',
+  BOOK_DELETE: 'Xoá sách',
+  USER_VIEW: 'Xem độc giả',
+  USER_UPDATE_ROLE: 'Đổi vai trò',
+  USER_UPDATE_STATUS: 'Khoá/Mở tài khoản',
+  LOAN_VIEW: 'Xem phiếu mượn',
+  LOAN_CREATE: 'Tạo phiếu mượn',
+  LOAN_CONFIRM: 'Xác nhận',
+  LOAN_BORROWING: 'Cho mượn',
+  LOAN_DETAIL_RETURN: 'Nhận trả',
+  LOAN_CANCEL: 'Huỷ phiếu',
+  CATEGORY_VIEW: 'Xem danh mục',
+  CATEGORY_CREATE: 'Thêm danh mục',
+  CATEGORY_UPDATE: 'Sửa danh mục',
+  CATEGORY_DELETE: 'Xoá danh mục',
+  SUB_CATEGORY_VIEW: 'Xem danh mục con',
+  SUB_CATEGORY_CREATE: 'Thêm danh mục con',
+  SUB_CATEGORY_UPDATE: 'Sửa danh mục con',
+  SUB_CATEGORY_DELETE: 'Xoá danh mục con',
+  DASHBOARD_VIEW: 'Xem thống kê',
+};
+
+function getGroupKey(permission: string): string {
+  const idx = permission.indexOf('_');
+  return idx > 0 ? permission.substring(0, idx) : 'OTHER';
+}
 
 export default function RolePermissionsSection() {
   const [selectedRole, setSelectedRole] = useState<string>('LIBRARIAN');
   const [permissions, setPermissions] = useState<Set<string>>(new Set());
+  const [allPermissions, setAllPermissions] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
@@ -53,6 +56,15 @@ export default function RolePermissionsSection() {
   const showToast = useCallback((text: string, type: 'success' | 'error' = 'success') => {
     setToast({ text, type });
     setTimeout(() => setToast(null), 3500);
+  }, []);
+
+  useEffect(() => {
+    getRolePermissionsApi()
+      .then((data) => {
+        const unique = Array.from(new Set((Array.isArray(data) ? data : []).map((p: any) => p.permission))).sort() as string[];
+        setAllPermissions(unique);
+      })
+      .catch(() => {});
   }, []);
 
   const fetchPermissions = useCallback(async (role: string) => {
@@ -92,6 +104,13 @@ export default function RolePermissionsSection() {
     setSaving(false);
   };
 
+  const grouped: Record<string, { key: string; label: string }[]> = {};
+  for (const perm of allPermissions) {
+    const group = getGroupKey(perm);
+    if (!grouped[group]) grouped[group] = [];
+    grouped[group].push({ key: perm, label: PERMISSION_LABELS[perm] || perm });
+  }
+
   return (
     <div>
       <h2 className="section-title">Phân Quyền Theo Vai Trò</h2>
@@ -113,9 +132,11 @@ export default function RolePermissionsSection() {
           <div className="empty-state"><p>Đang tải...</p></div>
         ) : (
           <>
-            {Object.entries(PERMISSION_GROUPS).map(([group, perms]) => (
-              <div key={group} style={{ marginBottom: 20 }}>
-                <h4 style={{ margin: '0 0 8px', fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-primary)' }}>{group}</h4>
+            {Object.entries(grouped).map(([groupKey, perms]) => (
+              <div key={groupKey} style={{ marginBottom: 20 }}>
+                <h4 style={{ margin: '0 0 8px', fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                  {GROUP_LABELS[groupKey] || groupKey}
+                </h4>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                   {perms.map((p) => (
                     <label
