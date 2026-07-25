@@ -71,11 +71,14 @@ export function mapLoan(l: any) {
       bookId: String(d.book_id),
       title: d.title || 'Đầu sách đã bị xóa',
       author: d.author || '',
+      imageUrl: resolveImageUrl(d.image_url),
       quantity: d.quantity || 0,
       status: d.status,
       dueDate: d.due_date ? new Date(d.due_date).toLocaleDateString('vi-VN') : '',
       returnDate: d.completed_at ? new Date(d.completed_at).toLocaleDateString('vi-VN') : '',
       lostQuantity: Number(d.lost_quantity ?? 0),
+      returnedQuantity: Number(d.returned_quantity ?? 0),
+      remainingQuantity: Number(d.remaining_quantity ?? d.quantity - (d.returned_quantity ?? 0) - (d.lost_quantity ?? 0)),
     })),
     book: { id: String(firstBook.book_id || ''), title: firstBook.title || '', author: firstBook.author || '' },
     bookTitles: items.map((d: any) => d.title).filter(Boolean).join(', ') || '—',
@@ -89,7 +92,6 @@ export function mapLoan(l: any) {
     totalFine: Number(l.total_fine ?? 0),
     totalPayment: Number(l.total_initial_payment ?? 0),
     status: isOverdue ? 'OVERDUE' : l.status,
-    _raw: l,
   };
 }
 
@@ -109,6 +111,7 @@ export function mapMemberLoan(l: any) {
       bookId: String(bk.book_id),
       title: bk.title || 'Đầu sách đã bị xóa',
       author: bk.author || '',
+      imageUrl: resolveImageUrl(bk.image_url),
       quantity: bk.quantity || 0,
       returnedQuantity: Number(bk.returned_quantity ?? 0),
       remainingQuantity: Number(bk.remaining_quantity ?? bk.quantity ?? 0),

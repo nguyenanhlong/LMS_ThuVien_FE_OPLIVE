@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
@@ -19,7 +19,7 @@ export default function LoansSection() {
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [returnModal, setReturnModal] = useState<any>(null);
-  const [cancelLoanId, setCancelLoanId] = useState<string | null>(null); 
+  const [cancelLoanId, setCancelLoanId] = useState<string | null>(null);
   const [filter, setFilter] = useState('ALL');
   const [toast, setToast] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
@@ -38,6 +38,18 @@ export default function LoansSection() {
   }, []);
 
   useEffect(() => { fetchLoans(); }, [fetchLoans]);
+
+  const refreshOneLoan = useCallback(async (loanId: string) => {
+    try {
+      const updated = await getLoanByIdApi(loanId);
+      const mapped = mapLoan(updated);
+      setLoans(prev => prev.map(l => l.id === loanId ? mapped : l));
+      return mapped;
+    } catch {
+      fetchLoans();
+      return null;
+    }
+  }, [fetchLoans]);
 
   const overdueLoans = useMemo(() => loans.filter((l) => l.status === 'OVERDUE'), [loans]);
   const doneLoans = useMemo(
@@ -58,9 +70,9 @@ export default function LoansSection() {
     setSubmitting(true);
     try {
       await confirmLoanApi(id);
-      showToast('Đã xác nhận yêu cầu mượn — chờ độc giả thanh toán!', 'success');
-      fetchLoans();
-    } catch (e: any) { showToast(e.message || 'Lỗi khi xác nhận', 'error'); }
+      await refreshOneLoan(id);
+      showToast('\u0110\u00e3 x\u00e1c nh\u1eadn y\u00eau c\u1ea7u m\u01b0\u1ee3n \u2014 ch\u1edd \u0111\u1ed9c gi\u1ea3 thanh to\u00e1n!', 'success');
+    } catch (e: any) { showToast(e.message || 'L\u1ed7i khi x\u00e1c nh\u1eadn', 'error'); }
     setSubmitting(false);
   };
 
@@ -68,9 +80,9 @@ export default function LoansSection() {
     setSubmitting(true);
     try {
       await borrowingLoanApi(id);
-      showToast('Đã giao sách cho độc giả!', 'success');
-      fetchLoans();
-    } catch (e: any) { showToast(e.message || 'Lỗi khi giao sách', 'error'); }
+      await refreshOneLoan(id);
+      showToast('\u0110\u00e3 giao s\u00e1ch cho \u0111\u1ed9c gi\u1ea3!', 'success');
+    } catch (e: any) { showToast(e.message || 'L\u1ed7i khi giao s\u00e1ch', 'error'); }
     setSubmitting(false);
   };
 
@@ -83,10 +95,10 @@ export default function LoansSection() {
     setSubmitting(true);
     try {
       await cancelLoanApi(cancelLoanId, reason);
-      showToast('Đã hủy phiếu mượn!', 'success');
+      await refreshOneLoan(cancelLoanId);
+      showToast('\u0110\u00e3 h\u1ee7y phi\u1ebfu m\u01b0\u1ee3n!', 'success');
       setCancelLoanId(null);
-      fetchLoans();
-    } catch (e: any) { showToast(e.message || 'Lỗi khi hủy', 'error'); }
+    } catch (e: any) { showToast(e.message || 'L\u1ed7i khi h\u1ee7y', 'error'); }
     setSubmitting(false);
   };
 
@@ -99,17 +111,19 @@ export default function LoansSection() {
     }
   };
 
-  const handleReturnDetail = async (detailId: string, returnQty: number, lostQty: number) => {
+  const handleReturnDetail = async (detailId: string, returnQty: number, lostQty: number, note?: string) => {
     setSubmitting(true);
     try {
-      await returnLoanDetailApi(detailId, { return_quantity: returnQty, lost_quantity: lostQty });
-      showToast('Đã thu hồi sách thành công!', 'success');
-      const updated = await getLoanByIdApi(returnModal.id);
-      const mapped = mapLoan(updated);
-      const stillPending = mapped.details.some((d: any) => d.status !== 'RETURNED' && d.status !== 'CANCELLED');
-      setReturnModal(stillPending ? mapped : null);
-      fetchLoans();
-    } catch (e: any) { showToast(e.message || 'Lỗi khi trả sách', 'error'); }
+      await returnLoanDetailApi(detailId, { return_quantity: returnQty, lost_quantity: lostQty, note });
+      showToast('\u0110\u00e3 thu h\u1ed3i s\u00e1ch th\u00e0nh c\u00f4ng!', 'success');
+      const mapped = await refreshOneLoan(returnModal.id);
+      if (mapped) {
+        const stillPending = mapped.details.some((d: any) => d.status !== 'RETURNED' && d.status !== 'CANCELLED');
+        setReturnModal(stillPending ? mapped : null);
+      } else {
+        setReturnModal(null);
+      }
+    } catch (e: any) { showToast(e.message || 'L\u1ed7i khi tr\u1ea3 s\u00e1ch', 'error'); }
     setSubmitting(false);
   };
 
@@ -121,7 +135,7 @@ export default function LoansSection() {
           background: 'rgba(239,68,68,0.08)', border: '1px solid var(--error)',
         }}>
           <h2 className="section-title" style={{ color: 'var(--error)', marginBottom: 12 }}>
-            ⚠ Có {overdueLoans.length} phiếu mượn QUÁ HẠN cần xử lý gấp
+            {'⚠ Có'} {overdueLoans.length} {'phiếu mượn QUÁ HẠN cần xử lý gấp'}
           </h2>
           <LoanTable loans={overdueLoans} loading={loading} role="MANAGER" onReturn={openReturnModal} />
         </div>
@@ -134,12 +148,12 @@ export default function LoansSection() {
             onClick={() => setFilter(s)}
             className={`category-pill ${filter === s ? 'active' : ''}`}
           >
-            {s === 'ALL' ? 'Đang xử lý' : LOAN_STATUS_MAP[s]?.label || s}
+            {s === 'ALL' ? '\u0110ang x\u1EED l\u00FD' : LOAN_STATUS_MAP[s]?.label || s}
           </button>
         ))}
       </div>
 
-      <h2 className="section-title">Danh Sách Phiếu Mượn</h2>
+      <h2 className="section-title">{'Danh Sách Phiếu Mượn'}</h2>
       <LoanTable
         loans={displayed} loading={loading} role="MANAGER"
         onConfirm={handleConfirm}
@@ -150,7 +164,7 @@ export default function LoansSection() {
 
       {doneLoans.length > 0 && filter === 'ALL' && (
         <div style={{ marginTop: 40 }}>
-          <h2 className="section-title">Lịch Sử Mượn Trả</h2>
+          <h2 className="section-title">{'Lịch Sử Mượn Trả'}</h2>
           <LoanHistory loans={doneLoans} loading={loading} />
         </div>
       )}
