@@ -131,7 +131,7 @@ function MemberModuleInner() {
         navItems={navItems}
         searchTerm={searchTerm}
         onSearchChange={(v) => { setSearchTerm(v); setSection('books'); setActiveNavKey('search'); }}
-        extraActions={user ? <NotificationBell /> : undefined}
+        extraActions={user ? <NotificationBell userRole={user.role} /> : undefined}
       />
 
       <main className="main-content container" style={{ paddingTop: '24px' }}>

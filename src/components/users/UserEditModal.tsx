@@ -8,7 +8,10 @@ export default function UserEditModal({ user, onClose, onUpdate, canEditRole, ca
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onUpdate({ role, is_active: isActive === 'true' });
+    const payload: any = {};
+    if (canEditRole) payload.role = role;
+    if (canEditStatus) payload.is_active = isActive === 'true';
+    onUpdate(payload);
   };
 
   return (

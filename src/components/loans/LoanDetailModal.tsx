@@ -33,7 +33,7 @@ export default function LoanDetailModal({
 
   return (
     <div className="modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="modal-content glass-panel" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 700 }}>
+      <div className="modal-content glass-panel" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 700, maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
         <div className="modal-header">
           <div>
             <h3 className="modal-title">Chi Tiết Phiếu Mượn #{loan.id}</h3>
@@ -46,7 +46,7 @@ export default function LoanDetailModal({
           </button>
         </div>
 
-        <div className="modal-body">
+        <div className="modal-body" style={{ overflowY: 'auto', flex: 1, minHeight: 0 }}>
           {/* Thông tin chung */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
             <div style={{ padding: 12, borderRadius: 8, background: 'var(--bg-tertiary)' }}>
