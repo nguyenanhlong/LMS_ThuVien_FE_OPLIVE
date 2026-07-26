@@ -56,7 +56,7 @@ export default function UsersSection({ permissions, userRole }: { permissions?: 
 
   const handleUpdate = async (data: any) => {
     try {
-      if (data.role !== undefined) {
+      if (canEditRole && data.role !== undefined) {
         await graphqlQuery(`
           mutation UpdateUserRole($id: ID!, $input: UpdateUserRoleInput!) {
             updateUserRole(id: $id, input: $input) {
@@ -68,7 +68,7 @@ export default function UsersSection({ permissions, userRole }: { permissions?: 
           input: { role: data.role }
         });
       }
-      if (data.is_active !== undefined) {
+      if (canEditStatus && data.is_active !== undefined) {
         await graphqlQuery(`
           mutation UpdateUserStatus($id: ID!, $input: UpdateUserStatusInput!) {
             updateUserStatus(id: $id, input: $input) {

@@ -1782,6 +1782,10 @@ input, select, textarea {
   border-left: 3px solid var(--error);
 }
 
+.toast-info {
+  border-left: 3px solid var(--primary);
+}
+
 .toast-icon {
   width: 24px;
   height: 24px;
@@ -1809,6 +1813,11 @@ input, select, textarea {
 .toast-error .toast-dot {
   background: var(--error);
   box-shadow: 0 0 8px rgba(239, 68, 68, 0.5);
+}
+
+.toast-info .toast-dot {
+  background: var(--primary);
+  box-shadow: 0 0 8px rgba(99, 102, 241, 0.5);
 }
 
 @keyframes toastIn {

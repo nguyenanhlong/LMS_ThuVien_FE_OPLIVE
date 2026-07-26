@@ -6,11 +6,10 @@ import BooksSection from '@/modules/staff/BooksSection';
 import LoansSection from '@/modules/staff/LoansSection';
 import UsersSection from '@/modules/staff/UsersSection';
 import CategoriesSection from '@/modules/admin/CategoriesSection';
-import SubCategoriesSection from '@/modules/admin/SubCategoriesSection';
 
 export default function LibrarianModule() {
   return (
-    <StaffLayout defaultSection="dashboard" allowedSections={['dashboard', 'books', 'users', 'loans', 'categories', 'subcategories']}>
+    <StaffLayout defaultSection="dashboard" allowedSections={['dashboard', 'books', 'users', 'loans', 'categories']}>
       {(section: string, permissions: string[], userRole?: string) => (
         <>
           {section === 'dashboard' && <DashboardSection />}
@@ -18,7 +17,6 @@ export default function LibrarianModule() {
           {section === 'loans' && <LoansSection />}
           {section === 'users' && <UsersSection permissions={permissions} userRole={userRole} />}
           {section === 'categories' && <CategoriesSection permissions={permissions} userRole={userRole} />}
-          {section === 'subcategories' && <SubCategoriesSection permissions={permissions} userRole={userRole} />}
         </>
       )}
     </StaffLayout>
