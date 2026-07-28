@@ -197,7 +197,7 @@ export default function Header({
               <div className="header-user">
                 <span className="header-user-name">
                   {user?.full_name || user?.username}
-                  <span className="header-user-role"> ({role === 'MANAGER' ? 'Quản Thủ' : 'Độc Giả'})</span>
+                  <span className="header-user-role"> ({user?.role === 'ADMIN' ? 'Quản Trị' : role === 'MANAGER' ? 'Quản Thủ' : 'Độc Giả'})</span>
                 </span>
                 {onLogout && (
                   <button onClick={() => setShowLogoutConfirm(true)} className="btn btn-secondary header-logout">

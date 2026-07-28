@@ -18,7 +18,7 @@ export default function DashboardCards({ summary }: { summary: any }) {
         { val: currency(summary.holding_deposit), lbl: 'Tiền cọc đang giữ', cls: '', color: 'var(--text-muted)' },
       ].map((item, i) => (
         <div key={i} className="stat-card glass-panel">
-          <div className={`stat-val ${item.cls}`} style={item.color ? { color: item.color } : undefined}>{item.val}</div>
+          <div className={`stat-val ${item.cls || ''}`} style={item.color ? { color: item.color } : undefined}>{item.val}</div>
           <div className="stat-lbl">{item.lbl}</div>
         </div>
       ))}
