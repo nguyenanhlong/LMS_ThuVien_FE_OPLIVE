@@ -12,9 +12,9 @@ import RolePermissionsSection from './RolePermissionsSection';
 export default function AdminModule() {
   return (
     <StaffLayout defaultSection="dashboard" allowedSections={['dashboard', 'books', 'users', 'loans', 'categories', 'subcategories', 'permissions']}>
-      {(section: string, permissions: string[], userRole?: string) => (
+      {(section: string, permissions: string[], userRole?: string, navigate?: (s: string) => void) => (
         <>
-          {section === 'dashboard' && <DashboardSection />}
+          {section === 'dashboard' && <DashboardSection onNavigate={navigate} />}
           {section === 'books' && <BooksSection />}
           {section === 'loans' && <LoansSection />}
           {section === 'users' && <UsersSection permissions={permissions} userRole={userRole} />}

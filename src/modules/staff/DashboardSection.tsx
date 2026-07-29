@@ -17,7 +17,7 @@ const LOAN_STATUS_LABELS: Record<string, { label: string; variant: string }> = {
   OVERDUE: { label: 'Qu\u00e1 h\u1ea1n', variant: 'danger' },
 };
 
-export default function DashboardSection() {
+export default function DashboardSection({ onNavigate }: { onNavigate?: (section: string) => void }) {
   const [summary, setSummary] = useState<any>(null);
   const [loanStats, setLoanStats] = useState<any[]>([]);
   const [topBooks, setTopBooks] = useState<any[]>([]);
@@ -27,6 +27,7 @@ export default function DashboardSection() {
   const [activeCard, setActiveCard] = useState<string | null>(null);
   const [cardDetail, setCardDetail] = useState<any[]>([]);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [showAllMembers, setShowAllMembers] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -133,7 +134,7 @@ export default function DashboardSection() {
           ) : activeCard === 'members' ? (
             <div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {cardDetail.slice(0, 5).map((u: any, i: number) => (
+                {cardDetail.slice(0, showAllMembers ? cardDetail.length : 5).map((u: any, i: number) => (
                   <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 0', borderBottom: i < Math.min(cardDetail.length, 5) - 1 ? '1px solid var(--border)' : 'none' }}>
                     <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem', fontWeight: 700, flexShrink: 0 }}>
                       {(u.full_name || u.username || '?').charAt(0).toUpperCase()}
@@ -150,9 +151,9 @@ export default function DashboardSection() {
                   <button
                     className="btn btn-secondary"
                     style={{ padding: '8px 20px', fontSize: '0.85rem' }}
-                    onClick={() => { window.location.href = '/users'; }}
+                  onClick={() => onNavigate ? onNavigate('users') : setShowAllMembers(!showAllMembers)}
                   >
-                    {`Xem t\u1ea5t c\u1ea3 ${cardDetail.length} \u0111\u1ed9c gi\u1ea3 \u2192`}
+                    {`Xem t\u1EA5t c\u1EA3 ${cardDetail.length} \u0111\u1ED9c gi\u1EA3 \u2192`}
                   </button>
                 </div>
               )}

@@ -11,9 +11,9 @@ import SubCategoriesSection from '@/modules/admin/SubCategoriesSection';
 export default function LibrarianModule() {
   return (
     <StaffLayout defaultSection="dashboard" allowedSections={['dashboard', 'books', 'users', 'loans', 'categories', 'subcategories']}>
-      {(section: string, permissions: string[], userRole?: string) => (
+      {(section: string, permissions: string[], userRole?: string, navigate?: (s: string) => void) => (
         <>
-          {section === 'dashboard' && <DashboardSection />}
+          {section === 'dashboard' && <DashboardSection onNavigate={navigate} />}
           {section === 'books' && <BooksSection />}
           {section === 'loans' && <LoansSection />}
           {section === 'users' && <UsersSection permissions={permissions} userRole={userRole} />}
