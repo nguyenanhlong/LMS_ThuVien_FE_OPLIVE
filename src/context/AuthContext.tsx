@@ -1,6 +1,6 @@
 'use client';
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
-import { loginApi, registerApi, clearTokens, getToken, getMyProfileApi } from '@/lib/api';
+import { loginApi, registerApi, clearTokens, getToken, getMyProfileApi, fetchAndCachePermissions, clearCachedPermSignature } from '@/lib/api';
 
 interface UserInfo {
   id: number;
@@ -59,6 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           role: payload.role,
           username: payload.username || '',
           full_name: payload.full_name || payload.email,
+          is_email_verified: payload.is_email_verified,
         });
         refreshProfile().finally(() => setLoading(false));
         return;
@@ -72,12 +73,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(async (username: string, password: string) => {
     await loginApi(username, password);
     const payload = JSON.parse(atob(getToken()!.split('.')[1]));
+    const role = payload.role;
+    clearCachedPermSignature(role);
+    await fetchAndCachePermissions(role);
     setUser({
       id: payload.sub,
       email: payload.email,
-      role: payload.role,
+      role,
       username: payload.username || '',
       full_name: payload.full_name || payload.email,
+      is_email_verified: payload.is_email_verified,
     });
     await refreshProfile();
   }, [refreshProfile]);

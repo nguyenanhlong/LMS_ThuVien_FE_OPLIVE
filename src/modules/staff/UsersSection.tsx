@@ -7,7 +7,8 @@ import UserEditModal from '@/components/users/UserEditModal';
 import Toast from '@/components/ui/Toast';
 import Pagination from '@/components/ui/Pagination';
 
-export default function UsersSection({ permissions }: { permissions?: string[] }) {
+export default function UsersSection({ permissions, userRole }: { permissions?: string[]; userRole?: string }) {
+  const isAdmin = userRole === 'ADMIN';
   const { user: currentUser } = useAuth();
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -15,8 +16,8 @@ export default function UsersSection({ permissions }: { permissions?: string[] }
   const [totalPages, setTotalPages] = useState(1);
   const [editUser, setEditUser] = useState<any>(null);
   const [toast, setToast] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
-  const canEditRole = permissions?.includes('USER_UPDATE_ROLE');
-  const canEditStatus = permissions?.includes('USER_UPDATE_STATUS');
+  const canEditRole = isAdmin || permissions?.includes('USER_UPDATE_ROLE');
+  const canEditStatus = isAdmin || permissions?.includes('USER_UPDATE_STATUS');
   const canEdit = canEditRole || canEditStatus;
 
   const showToast = useCallback((text: string, type: 'success' | 'error' = 'success') => {
@@ -38,6 +39,9 @@ export default function UsersSection({ permissions }: { permissions?: string[] }
               full_name
               role
               is_active
+              banned_reason
+              banned_at
+              last_activity_at
             }
             totalPages
           }
@@ -55,7 +59,7 @@ export default function UsersSection({ permissions }: { permissions?: string[] }
 
   const handleUpdate = async (data: any) => {
     try {
-      if (data.role !== undefined) {
+      if (canEditRole && data.role !== undefined) {
         await graphqlQuery(`
           mutation UpdateUserRole($id: ID!, $input: UpdateUserRoleInput!) {
             updateUserRole(id: $id, input: $input) {
@@ -67,7 +71,7 @@ export default function UsersSection({ permissions }: { permissions?: string[] }
           input: { role: data.role }
         });
       }
-      if (data.is_active !== undefined) {
+      if (canEditStatus && data.is_active !== undefined) {
         await graphqlQuery(`
           mutation UpdateUserStatus($id: ID!, $input: UpdateUserStatusInput!) {
             updateUserStatus(id: $id, input: $input) {
@@ -76,11 +80,17 @@ export default function UsersSection({ permissions }: { permissions?: string[] }
           }
         `, {
           id: editUser.id,
-          input: { is_active: data.is_active }
+          input: { is_active: data.is_active, ...(data.banned_reason ? { banned_reason: data.banned_reason } : {}) }
         });
       }
       setUsers((prev) => prev.map((u) =>
-        u.id === editUser.id ? { ...u, role: data.role ?? u.role, is_active: data.is_active ?? u.is_active } : u
+        u.id === editUser.id ? {
+          ...u,
+          role: data.role ?? u.role,
+          is_active: data.is_active ?? u.is_active,
+          banned_reason: data.is_active === false ? (data.banned_reason || u.banned_reason) : null,
+          banned_at: data.is_active === false ? new Date().toISOString() : null,
+        } : u
       ));
       showToast('Cập nhật thành công!', 'success');
       setEditUser(null);
@@ -106,6 +116,7 @@ export default function UsersSection({ permissions }: { permissions?: string[] }
                 <th>Username</th>
                 <th>Vai Trò</th>
                 <th>Trạng Thái</th>
+                <th>Lý Do Khóa</th>
                 {canEdit && <th>Hành Động</th>}
               </tr>
             </thead>
@@ -124,6 +135,15 @@ export default function UsersSection({ permissions }: { permissions?: string[] }
                     <span className={`badge ${u.is_active ? 'badge-success' : 'badge-danger'}`}>
                       {u.is_active ? 'Hoạt động' : 'Vô hiệu'}
                     </span>
+                  </td>
+                  <td style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', maxWidth: 200 }}>
+                    {!u.is_active && u.banned_reason ? (
+                      <span title={`Khóa lúc: ${u.banned_at ? new Date(u.banned_at).toLocaleString('vi-VN') : 'N/A'}`}>
+                        {u.banned_reason}
+                      </span>
+                    ) : (
+                      <span style={{ color: 'var(--text-muted)' }}>—</span>
+                    )}
                   </td>
                   {canEdit && (
                     <td>

@@ -2,16 +2,17 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { getRolePermissionsByRoleApi, getCachedPermissions } from '@/lib/api';
+import { getCachedPermissions, setCachedPermissions, getRolePermissionsByRoleApi } from '@/lib/api';
 import Header from '@/components/layout/Header';
 import Sidebar from '@/components/layout/Sidebar';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
+import NotificationBell from '@/components/notifications/NotificationBell';
 
-type Section = 'dashboard' | 'books' | 'users' | 'loans' | 'categories' | 'subcategories' | 'permissions';
+type Section = 'dashboard' | 'books' | 'users' | 'loans' | 'categories' | 'permissions';
 
 const sectionTitles: Record<Section, string> = {
-  dashboard: 'Tổng Quan', books: 'Quản Lý Sách', users: 'Quản Lý Độc Giả', loans: 'Quản Lý Mượn Trả', categories: 'Quản Lý Danh Mục', subcategories: 'Quản Lý Danh Mục Con', permissions: 'Phân Quyền',
+  dashboard: 'Tổng Quan', books: 'Quản Lý Sách', users: 'Quản Lý Độc Giả', loans: 'Quản Lý Mượn Trả', categories: 'Quản Lý Danh Mục', permissions: 'Phân Quyền',
 };
 
 export default function StaffLayout({ defaultSection, allowedSections, children }: any) {
@@ -22,38 +23,30 @@ export default function StaffLayout({ defaultSection, allowedSections, children 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [permissions, setPermissions] = useState<string[]>([]);
 
-  const fetchPermissions = useCallback(async () => {
+  useEffect(() => {
     if (!user?.role) return;
-    try {
-      const data = await getRolePermissionsByRoleApi(user.role);
-      setPermissions((Array.isArray(data) ? data : []).map((p: any) => p.permission));
-    } catch {
-      setPermissions(getCachedPermissions(user.role));
+    const role = user.role;
+    const cached = getCachedPermissions(role);
+    if (cached.length > 0) {
+      setPermissions(cached);
+    } else {
+      getRolePermissionsByRoleApi(role).then(data => {
+        const perms = (Array.isArray(data) ? data : []).map((p: any) => p.permission);
+        setCachedPermissions(role, perms);
+        setPermissions(perms);
+      }).catch(() => setPermissions([]));
     }
   }, [user]);
 
-  useEffect(() => { fetchPermissions(); }, [fetchPermissions]);
-
-  useEffect(() => {
-    const onFocus = () => fetchPermissions();
-    window.addEventListener('focus', onFocus);
-    return () => window.removeEventListener('focus', onFocus);
-  }, [fetchPermissions]);
-
-  useEffect(() => {
-    const interval = setInterval(fetchPermissions, 60_000);
-    return () => clearInterval(interval);
-  }, [fetchPermissions]);
-
   const handleNavigate = (path: string) => {
-    const map: Record<string, Section> = { '/dashboard': 'dashboard', '/books': 'books', '/users': 'users', '/loans': 'loans', '/categories': 'categories', '/subcategories': 'subcategories', '/permissions': 'permissions' };
+    const map: Record<string, Section> = { '/dashboard': 'dashboard', '/books': 'books', '/users': 'users', '/loans': 'loans', '/categories': 'categories', '/permissions': 'permissions' };
     const s = map[path] || defaultSection;
     if (allowedSections.includes(s)) { setSection(s); setSidebarOpen(false); }
   };
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', flexDirection: 'column' }}>
-      <Header role="MANAGER" onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} user={user} onLogout={logout} />
+      <Header role="MANAGER" onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} user={user} onLogout={logout} extraActions={user ? <NotificationBell userRole={user.role} /> : undefined} />
 
       <div style={{ display: 'flex', flex: 1 }}>
         {sidebarOpen && <div className="sidebar-backdrop" onClick={() => setSidebarOpen(false)} />}
@@ -63,7 +56,7 @@ export default function StaffLayout({ defaultSection, allowedSections, children 
 
         <main className="main-content container" style={{ paddingTop: '24px' }}>
           <Navbar title={sectionTitles[section]} role="MANAGER" />
-          {typeof children === 'function' ? children(section, permissions) : children}
+          {typeof children === 'function' ? children(section, permissions, user?.role) : children}
         </main>
       </div>
 

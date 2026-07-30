@@ -1,5 +1,5 @@
 'use client';
-
+import { useRouter } from 'next/navigation';
 import Table from '@/components/ui/Table';
 import Badge from '@/components/ui/Badge';
 
@@ -26,6 +26,7 @@ function actionButtons(
   onBorrowing?: (id: string) => void,
   onCancel?: (id: string) => void,
   onReturn?: (loan: any) => void,
+  onViewDetail?: (loan: any) => void,
 ) {
   if (role !== 'MANAGER') {
     return <span style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>—</span>;
@@ -48,14 +49,21 @@ function actionButtons(
       );
     case 'BORROWING':
     case 'OVERDUE':
-      return <button onClick={() => onReturn?.(row)} className="btn btn-success" style={btnStyle}>Trả sách</button>;
+      return (
+        <div style={{ display: 'flex', gap: 8 }}>
+          {onViewDetail && <button onClick={() => onViewDetail(row)} className="btn btn-edit" style={btnStyle}>Chi tiết</button>}
+          <button onClick={() => onReturn?.(row)} className="btn btn-success" style={btnStyle}>Trả sách</button>
+        </div>
+      );
     default:
-      return <span style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>—</span>;
+      return onViewDetail
+        ? <button onClick={() => onViewDetail(row)} className="btn btn-edit" style={{ padding: '6px 12px', fontSize: '0.8125rem' }}>Chi tiết</button>
+        : <span style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>—</span>;
   }
 }
 
 export default function LoanTable({
-  loans, loading, role, onConfirm, onBorrowing, onCancel, onReturn,
+loans, loading, role, onConfirm, onBorrowing, onCancel, onReturn, onViewDetail,
 }: {
   loans: any[];
   loading: boolean;
@@ -64,14 +72,30 @@ export default function LoanTable({
   onBorrowing?: (id: string) => void;
   onCancel?: (id: string) => void;
   onReturn?: (loan: any) => void;
+  onViewDetail?: (loan: any) => void;
 }) {
+  const router = useRouter();
   const columns = [
     { key: 'memberName', label: 'Độc giả', render: (row: any) => row.userName },
-    { key: 'bookTitles', label: 'Sách', render: (row: any) => row.bookTitles },
+    { key: 'bookTitles', label: 'Sách', render: (row: any) => {
+      const details = row.details || [];
+      const count = details.length;
+      const first = details[0]?.title || row.bookTitles;
+      const display = count <= 1 ? first : `${count} đầu sách`;
+      return (
+        <span
+          onClick={() => router.push(`/loans/${row.id}`)}
+          style={{ color: 'var(--primary)', cursor: 'pointer', textDecoration: 'underline' }}
+          title={row.bookTitles}
+        >
+          {display}
+        </span>
+      );
+    }},
     { key: 'requestDate', label: 'Ngày mượn', render: (row: any) => row.requestDate || '—' },
     { key: 'dueDate', label: 'Hạn trả', render: (row: any) => row.dueDate || '—' },
     { key: 'status', label: 'Trạng thái', render: (row: any) => statusBadge(row.status) },
-    { key: 'actions', label: 'Hành động', render: (row: any) => actionButtons(row, role, onConfirm, onBorrowing, onCancel, onReturn) },
+    { key: 'actions', label: 'Hành động', render: (row: any) => actionButtons(row, role, onConfirm, onBorrowing, onCancel, onReturn, onViewDetail) },
   ];
 
   return <Table columns={columns} data={loans} loading={loading} emptyText="Không có phiếu mượn nào" />;

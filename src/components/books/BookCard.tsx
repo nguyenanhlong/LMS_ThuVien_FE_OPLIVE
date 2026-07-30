@@ -46,6 +46,7 @@ export default function BookCard({ book, onRequireAuth }: { book: any; onRequire
         <span className="book-category" style={{ color: cover.accent }}>{book.category}</span>
         <h3 className="book-title">{book.title}</h3>
         <div className="book-author">{book.author}</div>
+        {book.publisher && <div className="book-author" style={{ fontSize: '0.75rem', opacity: 0.6 }}>{book.publisher}</div>}
         <p className="book-desc">{book.description || 'Chưa có mô tả chi tiết.'}</p>
       </div>
       <div className="book-card-footer" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>

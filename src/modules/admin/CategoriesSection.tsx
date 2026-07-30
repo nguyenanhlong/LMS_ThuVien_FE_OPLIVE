@@ -1,23 +1,36 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { getCategoriesApi, createCategoryApi, updateCategoryApi, deleteCategoryApi } from '@/lib/api';
+import {
+  getCategoriesApi, createCategoryApi, updateCategoryApi, deleteCategoryApi,
+  createSubCategoryApi, updateSubCategoryApi, deleteSubCategoryApi
+} from '@/lib/api';
 import Toast from '@/components/ui/Toast';
-import Pagination from '@/components/ui/Pagination';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 
-export default function CategoriesSection({ permissions }: { permissions?: string[] }) {
+export default function CategoriesSection({ permissions, userRole }: { permissions?: string[]; userRole?: string }) {
+  const isAdmin = userRole === 'ADMIN';
   const perms = permissions || [];
-  const canCreate = perms.includes('CATEGORY_CREATE');
-  const canUpdate = perms.includes('CATEGORY_UPDATE');
-  const canDelete = perms.includes('CATEGORY_DELETE');
+  const catCreate = isAdmin || perms.includes('CATEGORY_CREATE');
+  const catUpdate = isAdmin || perms.includes('CATEGORY_UPDATE');
+  const catDelete = isAdmin || perms.includes('CATEGORY_DELETE');
+  const subView = isAdmin || perms.includes('SUB_CATEGORY_VIEW');
+  const subCreate = isAdmin || perms.includes('SUB_CATEGORY_CREATE');
+  const subUpdate = isAdmin || perms.includes('SUB_CATEGORY_UPDATE');
+  const subDelete = isAdmin || perms.includes('SUB_CATEGORY_DELETE');
+
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [page, setPage] = useState(1);
-  const pageSize = 5;
-  const [modal, setModal] = useState<{ type: 'add' | 'edit'; data?: any } | null>(null);
-  const [name, setName] = useState('');
+  const [expanded, setExpanded] = useState<Set<number>>(new Set());
+  const [modal, setModal] = useState<{
+    type: 'addCat' | 'editCat' | 'addSub' | 'editSub';
+    cat?: any;
+    sub?: any;
+  } | null>(null);
+  const [formName, setFormName] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ type: 'cat' | 'sub'; item: any; catName?: string } | null>(null);
 
   const showToast = useCallback((text: string, type: 'success' | 'error' = 'success') => {
     setToast({ text, type });
@@ -28,57 +41,115 @@ export default function CategoriesSection({ permissions }: { permissions?: strin
     setLoading(true);
     try {
       const data = await getCategoriesApi();
-      setCategories(Array.isArray(data) ? data : []);
-      setPage(1);
+      const cats = Array.isArray(data) ? data : [];
+      if (!subView) {
+        for (const cat of cats) cat.sub_categories = [];
+      }
+      setCategories(cats);
     } catch { setCategories([]); }
     setLoading(false);
-  }, []);
+  }, [subView]);
 
   useEffect(() => { fetchCategories(); }, [fetchCategories]);
 
-  const openAdd = () => { setModal({ type: 'add' }); setName(''); };
-  const openEdit = (cat: any) => { setModal({ type: 'edit', data: cat }); setName(cat.name); };
+  const toggleExpand = (id: number) => {
+    setExpanded(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const openAddCat = () => { setModal({ type: 'addCat' }); setFormName(''); };
+  const openEditCat = (cat: any) => { setModal({ type: 'editCat', cat }); setFormName(cat.name); };
+  const openAddSub = (cat: any) => { setModal({ type: 'addSub', cat }); setFormName(''); };
+  const openEditSub = (sub: any, cat: any) => { setModal({ type: 'editSub', cat, sub }); setFormName(sub.name); };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    const name = formName.trim();
+    if (!name) return;
     setSubmitting(true);
     try {
-      if (modal?.type === 'add') {
-        await createCategoryApi(name.trim());
-        showToast('Thêm danh mục thành công!', 'success');
-      } else if (modal?.type === 'edit' && modal.data) {
-        await updateCategoryApi(modal.data.id, name.trim());
-        showToast('Cập nhật danh mục thành công!', 'success');
+      let ok = true;
+      switch (modal?.type) {
+        case 'addCat':
+          if (categories.some(c => c.name.toLowerCase() === name.toLowerCase())) {
+            showToast('Tên thể loại đã tồn tại', 'error'); ok = false; break;
+          }
+          await createCategoryApi(name);
+          showToast('Thêm danh mục thành công!', 'success');
+          break;
+        case 'editCat':
+          if (categories.some(c => c.id !== modal.cat.id && c.name.toLowerCase() === name.toLowerCase())) {
+            showToast('Tên thể loại đã tồn tại', 'error'); ok = false; break;
+          }
+          await updateCategoryApi(modal.cat.id, name);
+          showToast('Cập nhật danh mục thành công!', 'success');
+          break;
+        case 'addSub': {
+          const subs = modal.cat.sub_categories || [];
+          if (subs.some((s: any) => s.name.toLowerCase() === name.toLowerCase())) {
+            showToast('Tên thể loại con đã tồn tại trong thể loại này', 'error'); ok = false; break;
+          }
+          await createSubCategoryApi(modal.cat.id, name);
+          showToast('Thêm danh mục con thành công!', 'success');
+          break;
+        }
+        case 'editSub': {
+          const parent = categories.find(c =>
+            (c.sub_categories || []).some((s: any) => s.id === modal.sub.id)
+          );
+          const siblings = parent ? (parent.sub_categories || []).filter((s: any) => s.id !== modal.sub.id) : [];
+          if (siblings.some((s: any) => s.name.toLowerCase() === name.toLowerCase())) {
+            showToast('Tên thể loại con đã tồn tại trong thể loại này', 'error'); ok = false; break;
+          }
+          await updateSubCategoryApi(modal.sub.id, { name });
+          showToast('Cập nhật danh mục con thành công!', 'success');
+          break;
+        }
       }
-      setModal(null);
-      fetchCategories();
+      if (ok) { setModal(null); fetchCategories(); }
     } catch (e: any) { showToast(e.message || 'Lỗi', 'error'); }
     setSubmitting(false);
   };
 
-  const totalPages = Math.max(1, Math.ceil(categories.length / pageSize));
-  const paginatedCategories = categories.slice((page - 1) * pageSize, page * pageSize);
-
-  const handleDelete = async (cat: any) => {
+  const handleDeleteCat = async (cat: any) => {
     const count = cat.sub_categories?.length || 0;
     if (count > 0) {
       showToast(`Không thể xoá "${cat.name}" vì còn ${count} danh mục con`, 'error');
       return;
     }
-    if (!window.confirm(`Xoá danh mục "${cat.name}"?`)) return;
-    try {
-      await deleteCategoryApi(cat.id);
-      showToast('Xoá danh mục thành công!', 'success');
-      fetchCategories();
-    } catch (e: any) { showToast(e.message || 'Lỗi khi xoá', 'error'); }
+    setDeleteConfirm({ type: 'cat', item: cat });
   };
+
+  const handleDeleteSub = async (sub: any, catName: string) => {
+    setDeleteConfirm({ type: 'sub', item: sub, catName });
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteConfirm) return;
+    try {
+      if (deleteConfirm.type === 'cat') {
+        await deleteCategoryApi(deleteConfirm.item.id);
+        showToast('Xoá danh mục thành công!', 'success');
+      } else {
+        await deleteSubCategoryApi(deleteConfirm.item.id);
+        showToast('Xoá danh mục con thành công!', 'success');
+      }
+      setDeleteConfirm(null);
+      fetchCategories();
+    } catch (e: any) { showToast(e.message || 'Lỗi khi xoá', 'error'); setDeleteConfirm(null); }
+  };
+
+  const catCanEdit = (catUpdate || catDelete || subCreate);
+  const subCanEdit = (subUpdate || subDelete);
 
   return (
     <div>
       <div className="manager-header-actions">
-        <h2 className="section-title">Danh Sách Danh Mục</h2>
-        {canCreate && <button onClick={openAdd} className="btn btn-primary">+ Thêm Danh Mục</button>}
+        <h2 className="section-title">Quản Lý Danh Mục</h2>
+        {catCreate && <button onClick={openAddCat} className="btn btn-primary">+ Thêm Danh Mục</button>}
       </div>
 
       {loading ? (
@@ -86,54 +157,118 @@ export default function CategoriesSection({ permissions }: { permissions?: strin
       ) : !categories.length ? (
         <div className="empty-state"><p>Chưa có danh mục nào</p></div>
       ) : (
-        <div className="table-wrapper glass-panel">
-          <table className="custom-table">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Tên Danh Mục</th>
-                <th>Số Danh Mục Con</th>
-                {(canUpdate || canDelete) && <th>Hành Động</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {paginatedCategories.map((cat: any) => (
-                <tr key={cat.id}>
-                  <td>{cat.id}</td>
-                  <td><span style={{ fontWeight: 600 }}>{cat.name}</span></td>
-                  <td><span className="badge badge-info">{cat.sub_categories?.length || 0}</span></td>
-                  {(canUpdate || canDelete) && (
-                    <td style={{ display: 'flex', gap: 8 }}>
-                      {canUpdate && <button onClick={() => openEdit(cat)} className="btn btn-edit">Sửa</button>}
-                      {canDelete && <button onClick={() => handleDelete(cat)} className="btn btn-danger">Xoá</button>}
-                    </td>
+        <div className="glass-panel" style={{ padding: 0, overflow: 'hidden' }}>
+          {categories.map((cat: any, ci: number) => {
+            const subs = cat.sub_categories || [];
+            const isOpen = expanded.has(cat.id);
+            return (
+                <div key={cat.id} style={{
+                borderBottom: ci < categories.length - 1 ? '1px solid var(--border)' : 'none',
+              }}>
+                {/* Category row */}
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 12, padding: '14px 20px',
+                  cursor: subView ? 'pointer' : 'default', background: isOpen ? 'var(--bg-tertiary)' : 'transparent',
+                  transition: 'background 0.15s',
+                }}
+                  onClick={() => subView && toggleExpand(cat.id)}
+                >
+                  {subView && (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2"
+                      style={{ transform: isOpen ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0 }}>
+                      <path d="M9 18l6-6-6-6" />
+                    </svg>
                   )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  {!subView && <div style={{ width: 16, flexShrink: 0 }} />}
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" strokeWidth="2" style={{ flexShrink: 0 }}>
+                    <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" />
+                  </svg>
+                  <span style={{ fontWeight: 600, flex: 1, fontSize: '0.9375rem' }}>{cat.name}</span>
+                  {subView && (
+                    <span className="badge badge-info" style={{ fontSize: '0.75rem' }} onClick={(e) => e.stopPropagation()}>
+                      {subs.length} danh mục con
+                    </span>
+                  )}
+                  <div style={{ display: 'flex', gap: 6 }} onClick={(e) => e.stopPropagation()}>
+                    {subCreate && subView && <button onClick={() => openAddSub(cat)} className="btn btn-primary" style={{ padding: '5px 10px', fontSize: '0.75rem', whiteSpace: 'nowrap' }}>+ Thêm con</button>}
+                    {catUpdate && <button onClick={() => openEditCat(cat)} className="btn btn-edit" style={{ padding: '5px 10px', fontSize: '0.75rem' }}>Sửa</button>}
+                    {catDelete && <button onClick={() => handleDeleteCat(cat)} className="btn btn-danger" style={{ padding: '5px 10px', fontSize: '0.75rem' }}>Xoá</button>}
+                  </div>
+                </div>
+
+                {/* Sub-categories (expandable) */}
+                {subView && isOpen && (
+                  <div style={{ borderTop: '1px solid var(--border)', background: 'var(--bg-secondary)' }}>
+                    {subs.length === 0 ? (
+                      <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
+                        Chưa có danh mục con
+                      </div>
+                    ) : (
+                      subs.map((sub: any, si: number) => (
+                        <div key={sub.id} style={{
+                          display: 'flex', alignItems: 'center', gap: 12,
+                          padding: '10px 20px 10px 52px',
+                          borderBottom: si < subs.length - 1 ? '1px solid var(--border)' : 'none',
+                        }}>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" style={{ flexShrink: 0 }}>
+                            <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" />
+                          </svg>
+                          <span style={{ flex: 1, fontSize: '0.875rem' }}>{sub.name}</span>
+                          <div style={{ display: 'flex', gap: 6 }}>
+                            {subUpdate && <button onClick={() => openEditSub(sub, cat)} className="btn btn-edit" style={{ padding: '4px 8px', fontSize: '0.75rem' }}>Sửa</button>}
+                            {subDelete && <button onClick={() => handleDeleteSub(sub, cat.name)} className="btn btn-danger" style={{ padding: '4px 8px', fontSize: '0.75rem' }}>Xoá</button>}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 
-      {!loading && <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />}
+      <Toast message={toast?.text || ''} type={toast?.type || 'success'} />
 
+      <ConfirmDialog
+        open={!!deleteConfirm}
+        title={deleteConfirm?.type === 'cat' ? 'Xoá danh mục' : 'Xoá danh mục con'}
+        message={
+          deleteConfirm?.type === 'cat'
+            ? `Bạn có chắc muốn xoá danh mục "${deleteConfirm?.item?.name}"?`
+            : `Bạn có chắc muốn xoá danh mục con "${deleteConfirm?.item?.name}"?`
+        }
+        confirmText="Xoá"
+        cancelText="Huỷ"
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteConfirm(null)}
+      />
+
+      {/* Modal for Add/Edit Category & SubCategory */}
       {modal && (
         <div className="modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) setModal(null); }}>
           <div className="modal-content glass-panel">
             <div className="modal-header">
-              <h3 className="modal-title">{modal.type === 'add' ? 'Thêm Danh Mục' : 'Sửa Danh Mục'}</h3>
+              <h3 className="modal-title">
+                {modal.type === 'addCat' ? 'Thêm Danh Mục' :
+                 modal.type === 'editCat' ? 'Sửa Danh Mục' :
+                 modal.type === 'addSub' ? `Thêm Danh Mục Con (${modal.cat.name})` :
+                 'Sửa Danh Mục Con'}
+              </h3>
               <button onClick={() => setModal(null)} className="modal-close">
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4l8 8M12 4l-8 8" /></svg>
               </button>
             </div>
             <form onSubmit={handleSubmit}>
               <div className="form-group">
-                <label>Tên danh mục</label>
-                <input className="form-control" value={name} onChange={(e) => setName(e.target.value)} placeholder="Nhập tên danh mục..." required />
+                <label>{modal.type === 'addSub' || modal.type === 'editSub' ? 'Tên danh mục con' : 'Tên danh mục'}</label>
+                <input className="form-control" value={formName} onChange={(e) => setFormName(e.target.value)}
+                  placeholder="Nhập tên..." required autoFocus />
               </div>
               <div className="modal-actions">
                 <button type="button" onClick={() => setModal(null)} className="btn btn-secondary">Hủy</button>
-                <button type="submit" className="btn btn-primary" disabled={submitting || !name.trim()}>
+                <button type="submit" className="btn btn-primary" disabled={submitting || !formName.trim()}>
                   {submitting ? 'Đang xử lý...' : 'Lưu'}
                 </button>
               </div>
@@ -141,8 +276,6 @@ export default function CategoriesSection({ permissions }: { permissions?: strin
           </div>
         </div>
       )}
-
-      <Toast message={toast?.text || ''} type={toast?.type || 'success'} />
     </div>
   );
 }

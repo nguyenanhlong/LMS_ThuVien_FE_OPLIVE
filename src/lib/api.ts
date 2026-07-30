@@ -149,6 +149,32 @@ export function setCachedPermissions(role: string, perms: string[]) {
   localStorage.setItem(`permissions_${role}`, JSON.stringify(perms));
 }
 
+export function getCachedPermSignature(role: string): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem(`perm_sig_${role}`);
+}
+
+export function setCachedPermSignature(role: string, signature: string) {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(`perm_sig_${role}`, signature);
+}
+
+export function clearCachedPermSignature(role: string) {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem(`perm_sig_${role}`);
+}
+
+export async function fetchAndCachePermissions(role: string): Promise<string[]> {
+  try {
+    const data = await getRolePermissionsByRoleApi(role);
+    const perms = (Array.isArray(data) ? data : []).map((p: any) => p.permission);
+    setCachedPermissions(role, perms);
+    return perms;
+  } catch {
+    return getCachedPermissions(role);
+  }
+}
+
 export async function createBookApi(data: any) {
   const result = await gql<{ createBook: any }>(
     `mutation CreateBook($input: CreateBookInput!) { createBook(input: $input) { id } }`,
@@ -282,18 +308,20 @@ export async function getSubCategoriesApi(categoryId?: number) {
   return data.subCategories;
 }
 
-export async function createSubCategoryApi(category_id: number, name: string) {
+export async function createSubCategoryApi(category_id: number | string, name: string) {
   const data = await gql<{ createSubCategory: any }>(
     `mutation CreateSubCategory($input: CreateSubCategoryInput!) { createSubCategory(input: $input) { id name category_id } }`,
-    { input: { category_id, name } },
+    { input: { category_id: Number(category_id), name } },
   );
   return data.createSubCategory;
 }
 
-export async function updateSubCategoryApi(id: string | number, data: { category_id?: number; name?: string }) {
+export async function updateSubCategoryApi(id: string | number, data: { category_id?: number | string; name?: string }) {
+  const input: any = { ...data };
+  if (input.category_id !== undefined) input.category_id = Number(input.category_id);
   const result = await gql<{ updateSubCategory: any }>(
     `mutation UpdateSubCategory($id: ID!, $input: UpdateSubCategoryInput!) { updateSubCategory(id: $id, input: $input) { id name category_id } }`,
-    { id: String(id), input: data },
+    { id: String(id), input },
   );
   return result.updateSubCategory;
 }
@@ -359,6 +387,38 @@ export async function updateMyProfileApi(input: { full_name?: string; email?: st
   return data.updateMyProfile;
 }
 
+export async function verifyEmailApi(token: string) {
+  const data = await gql<{ verifyEmail: { message: string } }>(
+    `mutation VerifyEmail($input: VerifyEmailInput!) { verifyEmail(input: $input) { message } }`,
+    { input: { token } },
+  );
+  return data.verifyEmail;
+}
+
+export async function resendVerificationEmailApi(email: string) {
+  const data = await gql<{ resendVerificationEmail: { message: string } }>(
+    `mutation ResendVerificationEmail($input: ResendVerificationInput!) { resendVerificationEmail(input: $input) { message } }`,
+    { input: { email } },
+  );
+  return data.resendVerificationEmail;
+}
+
+export async function forgotPasswordApi(email: string) {
+  const data = await gql<{ forgotPassword: { message: string } }>(
+    `mutation ForgotPassword($input: ForgotPasswordInput!) { forgotPassword(input: $input) { message } }`,
+    { input: { email } },
+  );
+  return data.forgotPassword;
+}
+
+export async function resetPasswordApi(token: string, new_password: string, confirm_password: string) {
+  const data = await gql<{ resetPassword: { message: string } }>(
+    `mutation ResetPassword($input: ResetPasswordInput!) { resetPassword(input: $input) { message } }`,
+    { input: { token, new_password, confirm_password } },
+  );
+  return data.resetPassword;
+}
+
 export async function updateMyAvatarApi(file: File) {
   const query = `mutation($file: Upload!) { updateMyAvatar(image: $file) { ${ME_FIELDS} } }`;
   const variables = { file: null };
@@ -408,4 +468,40 @@ export async function removeMyFavoriteBookApi(bookId: string | number) {
     { bookId: String(bookId) },
   );
   return data.removeMyFavoriteBook;
+}
+
+export async function getDashboardSummaryApi(input?: { from_date?: string; to_date?: string }) {
+  const data = await gql<{ dashboardSummary: any }>(
+    `query DashboardSummary($input: DashboardFilterInput) { dashboardSummary(input: $input) {
+      total_book_titles total_book_copies borrowed_book_copies available_book_copies
+      total_members pending_loans pending_payment_loans borrowing_loans
+      completed_loans cancelled_loans overdue_details
+      rental_revenue fine_revenue lost_book_revenue total_revenue holding_deposit
+    } }`,
+    { input },
+  );
+  return data.dashboardSummary;
+}
+
+export async function getDashboardLoanStatusApi(input?: { from_date?: string; to_date?: string }) {
+  const data = await gql<{ dashboardLoanStatusStatistics: any[] }>(
+    `query DashboardLoanStatus($input: DashboardFilterInput) { dashboardLoanStatusStatistics(input: $input) { status count } }`,
+    { input },
+  );
+  return data.dashboardLoanStatusStatistics;
+}
+
+export async function getDashboardTopBooksApi(limit?: number, input?: { from_date?: string; to_date?: string }) {
+  const data = await gql<{ dashboardTopBorrowedBooks: any[] }>(
+    `query DashboardTopBooks($limit: Int, $input: DashboardFilterInput) { dashboardTopBorrowedBooks(limit: $limit, input: $input) { book_id title author image_url borrowed_quantity } }`,
+    { limit, input },
+  );
+  return data.dashboardTopBorrowedBooks;
+}
+
+export async function getPermissionsApi() {
+  const data = await gql<{ permissions: { code: string; label: string; group: string }[] }>(
+    `query Permissions { permissions { code label group } }`,
+  );
+  return data.permissions;
 }

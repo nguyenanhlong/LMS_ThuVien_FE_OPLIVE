@@ -3,7 +3,7 @@
 import React, { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { getBookApi } from '@/lib/api';
-import { resolveImageUrl } from '@/utils/mappers';
+import { mapBook } from '@/utils/mappers';
 import BookDetail from '@/components/books/BookDetail';
 import { ArrowLeftIcon } from '@/components/ui/icons';
 
@@ -19,20 +19,7 @@ export default function BookDetailPage({ params }: { params: Promise<{ id: strin
       setLoading(true);
       try {
         const b = await getBookApi(id);
-        const available = (b.total_quantity || 0) - (b.borrowed_quantity || 0);
-        setBook({
-          id: String(b.id),
-          title: b.title,
-          author: b.author || '',
-          category: b.publisher || 'Khác',
-          description: b.description || '',
-          image_url: resolveImageUrl(b.image_url),
-          isbn: b.isbn || '',
-          publisher: b.publisher || '',
-          totalQuantity: b.total_quantity || 0,
-          borrowedQuantity: b.borrowed_quantity || 0,
-          status: available > 0 ? 'AVAILABLE' : 'BORROWED',
-        });
+        setBook(mapBook(b));
       } catch (err: any) {
         setError(err.message || 'Lỗi khi tải thông tin sách');
       }

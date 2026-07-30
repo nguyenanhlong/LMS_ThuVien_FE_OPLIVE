@@ -44,6 +44,15 @@ function MemberModuleInner() {
   const [activeLoanCount, setActiveLoanCount] = useState(0);
   const [activeNavKey, setActiveNavKey] = useState<NavKey>('home');
   const [showAuth, setShowAuth] = useState(false);
+  const [verifiedMessage, setVerifiedMessage] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    if (!user && window.location.search.includes('verified=true')) {
+      setShowAuth(true);
+      setVerifiedMessage('Xác thực email thành công! Vui lòng đăng nhập.');
+      window.history.replaceState({}, '', '/');
+    }
+  }, [user]);
 
   const sections: Record<Section, string> = {
     books: 'Tra Cứu Sách',
@@ -148,7 +157,7 @@ function MemberModuleInner() {
         navItems={navItems}
         searchTerm={searchTerm}
         onSearchChange={(v) => { setSearchTerm(v); setSection('books'); setActiveNavKey('search'); }}
-        extraActions={user ? <NotificationBell /> : undefined}
+        extraActions={user ? <NotificationBell userRole={user.role} /> : undefined}
       />
 
       <main className="main-content container" style={{ paddingTop: '24px' }}>
@@ -174,7 +183,12 @@ function MemberModuleInner() {
 
       <Footer />
 
-      {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
+      {showAuth && (
+        <AuthModal
+          onClose={() => setShowAuth(false)}
+          initialMessage={verifiedMessage}
+        />
+      )}
     </div>
   );
 }

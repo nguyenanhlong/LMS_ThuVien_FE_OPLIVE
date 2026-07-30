@@ -1,6 +1,6 @@
 'use client';
 
-export default function Toast({ message, type }: { message: string; type: 'success' | 'error' }) {
+export default function Toast({ message, type }: { message: string; type: 'success' | 'error' | 'info' }) {
   if (!message) return null;
   return (
     <div className={`toast toast-${type}`}>

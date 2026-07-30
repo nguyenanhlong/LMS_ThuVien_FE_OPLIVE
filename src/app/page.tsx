@@ -12,6 +12,7 @@ export default function Home() {
   const { user, loading: authLoading } = useAuth();
 
   const roleTitle: Record<string, string> = {
+    GUEST: 'Thư Viện Số - Tra Cứu',
     MEMBER: 'Thư Viện Số - Tra Cứu',
     LIBRARIAN: 'Thư Viện Số - Thủ Thư',
     ADMIN: 'Thư Viện Số - Quản Lý',
@@ -26,6 +27,7 @@ export default function Home() {
   }
 
   if (!user) return <MemberModule />;
+  if (user.role === 'GUEST') return <MemberModule />;
   if (user.role === 'MEMBER') return <MemberModule />;
   if (user.role === 'LIBRARIAN') return <LibrarianModule />;
   if (user.role === 'ADMIN') return <AdminModule />;
