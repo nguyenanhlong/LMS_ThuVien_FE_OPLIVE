@@ -372,6 +372,21 @@ export async function markNotificationsReadApi(ids: (string | number)[]) {
   return data.markNotificationsAsRead;
 }
 
+const ME_FIELDS = `id username email full_name avatar role is_active is_email_verified created_at updated_at`;
+
+export async function getMyProfileApi() {
+  const data = await gql<{ me: any }>(`query Me { me { ${ME_FIELDS} } }`);
+  return data.me;
+}
+
+export async function updateMyProfileApi(input: { full_name?: string; email?: string }) {
+  const data = await gql<{ updateMyProfile: any }>(
+    `mutation UpdateMyProfile($input: UpdateProfileInput!) { updateMyProfile(input: $input) { ${ME_FIELDS} } }`,
+    { input },
+  );
+  return data.updateMyProfile;
+}
+
 export async function verifyEmailApi(token: string) {
   const data = await gql<{ verifyEmail: { message: string } }>(
     `mutation VerifyEmail($input: VerifyEmailInput!) { verifyEmail(input: $input) { message } }`,
@@ -388,14 +403,6 @@ export async function resendVerificationEmailApi(email: string) {
   return data.resendVerificationEmail;
 }
 
-export async function updateMyProfileApi(data: { full_name?: string; email?: string }) {
-  const result = await gql<{ updateMyProfile: any }>(
-    `mutation UpdateMyProfile($input: UpdateProfileInput!) { updateMyProfile(input: $input) { id full_name email } }`,
-    { input: data },
-  );
-  return result.updateMyProfile;
-}
-
 export async function forgotPasswordApi(email: string) {
   const data = await gql<{ forgotPassword: { message: string } }>(
     `mutation ForgotPassword($input: ForgotPasswordInput!) { forgotPassword(input: $input) { message } }`,
@@ -410,6 +417,57 @@ export async function resetPasswordApi(token: string, new_password: string, conf
     { input: { token, new_password, confirm_password } },
   );
   return data.resetPassword;
+}
+
+export async function updateMyAvatarApi(file: File) {
+  const query = `mutation($file: Upload!) { updateMyAvatar(image: $file) { ${ME_FIELDS} } }`;
+  const variables = { file: null };
+  const map = { '0': ['variables.file'] };
+  const form = new FormData();
+  form.append('operations', JSON.stringify({ query, variables }));
+  form.append('map', JSON.stringify(map));
+  form.append('0', file);
+  const token = getToken();
+  const res = await fetch(`${API_BASE}/graphql`, {
+    method: 'POST',
+    headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), 'apollo-require-preflight': 'true' },
+    body: form,
+  });
+  const json = await res.json();
+  if (json.errors) throw new Error(json.errors[0].message || 'Upload avatar thất bại');
+  return json.data?.updateMyAvatar;
+}
+
+export async function changeMyPasswordApi(current_password: string, new_password: string, confirm_password: string) {
+  const data = await gql<{ changeMyPassword: { message: string } }>(
+    `mutation ChangeMyPassword($input: ChangePasswordInput!) { changeMyPassword(input: $input) { message } }`,
+    { input: { current_password, new_password, confirm_password } },
+  );
+  return data.changeMyPassword;
+}
+
+export async function getMyFavoriteBooksApi(params?: { page?: number; pageSize?: number; keyword?: string }) {
+  const data = await gql<{ myFavoriteBooks: any }>(
+    `query MyFavoriteBooks($query: GetFavoriteBooksInput) { myFavoriteBooks(query: $query) { pageNumber pageSize totalItems totalPages items { ${BOOK_FIELDS} } } }`,
+    { query: { page: params?.page, pageSize: params?.pageSize ?? 100, keyword: params?.keyword } },
+  );
+  return data.myFavoriteBooks;
+}
+
+export async function addMyFavoriteBookApi(bookId: string | number) {
+  const data = await gql<{ addMyFavoriteBook: boolean }>(
+    `mutation AddMyFavoriteBook($bookId: ID!) { addMyFavoriteBook(bookId: $bookId) }`,
+    { bookId: String(bookId) },
+  );
+  return data.addMyFavoriteBook;
+}
+
+export async function removeMyFavoriteBookApi(bookId: string | number) {
+  const data = await gql<{ removeMyFavoriteBook: boolean }>(
+    `mutation RemoveMyFavoriteBook($bookId: ID!) { removeMyFavoriteBook(bookId: $bookId) }`,
+    { bookId: String(bookId) },
+  );
+  return data.removeMyFavoriteBook;
 }
 
 export async function getDashboardSummaryApi(input?: { from_date?: string; to_date?: string }) {

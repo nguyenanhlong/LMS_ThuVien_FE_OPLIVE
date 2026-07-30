@@ -1,14 +1,29 @@
  'use client';
 
 import Link from 'next/link';
-import { ArrowRightIcon } from '@/components/ui/icons';
+import { ArrowRightIcon, HeartIcon } from '@/components/ui/icons';
 import { getCover } from '@/lib/category-covers';
 import { useCart } from '@/context/CartContext';
+import { useFavorites } from '@/context/FavoritesContext';
+import { useAuth } from '@/context/AuthContext';
 
-export default function BookCard({ book }: { book: any }) {
+export default function BookCard({ book, onRequireAuth }: { book: any; onRequireAuth: () => void }) {
   const cover = getCover(book.category);
+  const { user } = useAuth();
   const { addItem, isInCart } = useCart();
+  const { isFavorite, toggleFavorite } = useFavorites();
   const inCart = isInCart(book.id);
+  const favorite = isFavorite(book.id);
+
+  const handleAddToCart = () => {
+    if (!user) { onRequireAuth(); return; }
+    addItem(book);
+  };
+
+  const handleToggleFavorite = () => {
+    if (!user) { onRequireAuth(); return; }
+    toggleFavorite(book.id);
+  };
 
   return (
     <div className="book-card glass-panel">
@@ -18,6 +33,14 @@ export default function BookCard({ book }: { book: any }) {
         <span className={`book-cover-badge ${book.status === 'AVAILABLE' ? 'badge-success' : 'badge-danger'}`}>
           {book.status === 'AVAILABLE' ? 'Sẵn sàng' : 'Đã mượn'}
         </span>
+        <button
+          onClick={handleToggleFavorite}
+          className={`book-cover-favorite ${favorite ? 'active' : ''}`}
+          aria-label={favorite ? 'Bỏ khỏi yêu thích' : 'Thêm vào yêu thích'}
+          title={favorite ? 'Bỏ khỏi yêu thích' : 'Thêm vào yêu thích'}
+        >
+          <HeartIcon filled={favorite} />
+        </button>
       </div>
       <div className="book-card-body">
         <span className="book-category" style={{ color: cover.accent }}>{book.category}</span>
@@ -29,7 +52,7 @@ export default function BookCard({ book }: { book: any }) {
       <div className="book-card-footer" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         {book.status === 'AVAILABLE' ? (
           <button
-            onClick={() => addItem(book)}
+            onClick={handleAddToCart}
             className={`btn ${inCart ? 'btn-secondary' : 'btn-primary'} btn-full`}
             disabled={inCart}
             id={`add-to-cart-btn-${book.id}`}

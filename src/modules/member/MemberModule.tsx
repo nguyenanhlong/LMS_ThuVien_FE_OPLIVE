@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { CartProvider, useCart } from '@/context/CartContext';
+import { FavoritesProvider, useFavorites } from '@/context/FavoritesContext';
 import { getLoansApi } from '@/lib/api';
 import Header, { HeaderNavItem } from '@/components/layout/Header';
 import Navbar from '@/components/layout/Navbar';
@@ -11,10 +12,12 @@ import NotificationBell from '@/components/notifications/NotificationBell';
 import BooksSection from './BooksSection';
 import LoansSection from './LoansSection';
 import CartSection from './CartSection';
+import ProfileSection from './ProfileSection';
+import FavoritesSection from './FavoritesSection';
 import AuthModal from '@/components/auth/AuthModal';
 
-type Section = 'books' | 'cart' | 'loans';
-type NavKey = 'home' | 'search' | 'category' | 'recommend' | 'cart' | 'shelf';
+type Section = 'books' | 'cart' | 'loans' | 'profile' | 'favorites';
+type NavKey = 'home' | 'search' | 'category' | 'recommend' | 'favorites' | 'cart' | 'shelf';
 
 const ACTIVE_LOAN_STATUSES = ['PENDING', 'PENDING_PAYMENT', 'BORROWING'];
 const CATEGORIES = ['Tất cả', 'Kỹ năng sống', 'Tiểu thuyết', 'Khoa học', 'Tài chính'];
@@ -22,7 +25,9 @@ const CATEGORIES = ['Tất cả', 'Kỹ năng sống', 'Tiểu thuyết', 'Khoa 
 export default function MemberModule() {
   return (
     <CartProvider>
-      <MemberModuleInner />
+      <FavoritesProvider>
+        <MemberModuleInner />
+      </FavoritesProvider>
     </CartProvider>
   );
 }
@@ -30,6 +35,7 @@ export default function MemberModule() {
 function MemberModuleInner() {
   const { user, logout } = useAuth();
   const { items: cartItems } = useCart();
+  const { favoriteIds } = useFavorites();
   const [section, setSection] = useState<Section>('books');
   const [loanRefreshKey, setLoanRefreshKey] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
@@ -48,7 +54,13 @@ function MemberModuleInner() {
     }
   }, [user]);
 
-  const sections: Record<Section, string> = { books: 'Tra Cứu Sách', cart: 'Giỏ Hàng Của Tôi', loans: 'Phiếu Mượn Của Tôi' };
+  const sections: Record<Section, string> = {
+    books: 'Tra Cứu Sách',
+    cart: 'Giỏ Hàng Của Tôi',
+    loans: 'Phiếu Mượn Của Tôi',
+    profile: 'Hồ Sơ Của Tôi',
+    favorites: 'Sách Yêu Thích',
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -95,6 +107,17 @@ function MemberModuleInner() {
     setShowAuth(true);
   }, []);
 
+  const handleGoToProfile = () => {
+    if (!user) { setShowAuth(true); return; }
+    setSection('profile');
+  };
+
+  const handleGoToFavorites = () => {
+    if (!user) { setShowAuth(true); return; }
+    setSection('favorites');
+    setActiveNavKey('favorites');
+  };
+
   const handleSelectCategory = (category: string) => {
     setSelectedCategory(category);
     setSection('books');
@@ -117,6 +140,7 @@ function MemberModuleInner() {
       })),
     },
     { key: 'recommend', label: 'Gợi ý', active: activeNavKey === 'recommend', onClick: handleGoToRecommend },
+    { key: 'favorites', label: 'Yêu thích', active: activeNavKey === 'favorites', badge: favoriteIds.size, onClick: handleGoToFavorites },
     { key: 'cart', label: 'Giỏ hàng', active: activeNavKey === 'cart', badge: cartItems.length, onClick: handleGoToCart },
     { key: 'shelf', label: 'Kệ sách', active: activeNavKey === 'shelf', badge: activeLoanCount, onClick: handleGoToLoans },
   ];
@@ -128,6 +152,8 @@ function MemberModuleInner() {
         user={user}
         onLogout={user ? logout : undefined}
         onLoginRequest={() => setShowAuth(true)}
+        onGoToProfile={handleGoToProfile}
+        onGoToFavorites={handleGoToFavorites}
         navItems={navItems}
         searchTerm={searchTerm}
         onSearchChange={(v) => { setSearchTerm(v); setSection('books'); setActiveNavKey('search'); }}
@@ -140,6 +166,7 @@ function MemberModuleInner() {
           <BooksSection
             searchTerm={searchTerm}
             selectedCategory={selectedCategory}
+            onRequireAuth={handleRequireAuth}
           />
         )}
         {section === 'cart' && (
@@ -150,6 +177,8 @@ function MemberModuleInner() {
           />
         )}
         {section === 'loans' && <LoansSection key={loanRefreshKey} user={user} />}
+        {section === 'profile' && <ProfileSection />}
+        {section === 'favorites' && <FavoritesSection onRequireAuth={handleRequireAuth} />}
       </main>
 
       <Footer />
