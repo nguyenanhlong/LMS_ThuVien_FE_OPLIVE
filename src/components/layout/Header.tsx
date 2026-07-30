@@ -1,12 +1,14 @@
 'use client';
 
 import { ReactNode, useEffect, useRef, useState } from 'react';
+import { resolveImageUrl } from '@/utils/mappers';
 
 interface UserInfo {
   id: number;
   username: string;
   email: string;
   full_name: string;
+  avatar?: string;
   role: string;
 }
 
@@ -32,6 +34,8 @@ export default function Header({
   user,
   onLogout,
   onLoginRequest,
+  onGoToProfile,
+  onGoToFavorites,
   navItems,
   searchTerm,
   onSearchChange,
@@ -42,6 +46,8 @@ export default function Header({
   user?: UserInfo | null;
   onLogout?: () => void;
   onLoginRequest?: () => void;
+  onGoToProfile?: () => void;
+  onGoToFavorites?: () => void;
   navItems?: HeaderNavItem[];
   searchTerm?: string;
   onSearchChange?: (value: string) => void;
@@ -49,7 +55,9 @@ export default function Header({
 }) {
   const initial = user ? (user?.full_name || user?.username || '?').trim().charAt(0).toUpperCase() : '?';
   const [openKey, setOpenKey] = useState<string | null>(null);
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const navRef = useRef<HTMLElement>(null);
+  const accountRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!openKey) return;
@@ -59,6 +67,15 @@ export default function Header({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [openKey]);
+
+  useEffect(() => {
+    if (!accountMenuOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (accountRef.current && !accountRef.current.contains(e.target as Node)) setAccountMenuOpen(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [accountMenuOpen]);
 
   const handleNavClick = (item: HeaderNavItem) => {
     if (item.dropdown) {
@@ -159,12 +176,38 @@ export default function Header({
 
           {navItems ? (
             user ? (
-              <div className="header-user header-user-compact">
-                <span className="header-avatar" title={user?.full_name || user?.username}>{initial}</span>
-                {onLogout && (
-                  <button onClick={onLogout} className="btn btn-secondary header-logout">
-                    Thoát
-                  </button>
+              <div className="header-user header-user-compact" ref={accountRef} style={{ position: 'relative' }}>
+                <button
+                  className="header-avatar"
+                  title={user?.full_name || user?.username}
+                  onClick={() => setAccountMenuOpen((v) => !v)}
+                  aria-expanded={accountMenuOpen}
+                >
+                  {user.avatar ? (
+                    <img src={resolveImageUrl(user.avatar)} alt={initial} />
+                  ) : (
+                    initial
+                  )}
+                </button>
+                {accountMenuOpen && (
+                  <div className="header-account-dropdown">
+                    <div className="header-account-dropdown-name">{user?.full_name || user?.username}</div>
+                    {onGoToProfile && (
+                      <button onClick={() => { onGoToProfile(); setAccountMenuOpen(false); }} className="header-account-dropdown-link">
+                        Hồ sơ của tôi
+                      </button>
+                    )}
+                    {onGoToFavorites && (
+                      <button onClick={() => { onGoToFavorites(); setAccountMenuOpen(false); }} className="header-account-dropdown-link">
+                        Sách yêu thích
+                      </button>
+                    )}
+                    {onLogout && (
+                      <button onClick={() => { onLogout(); setAccountMenuOpen(false); }} className="header-account-dropdown-link danger">
+                        Đăng xuất
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
             ) : (

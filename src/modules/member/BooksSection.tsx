@@ -6,7 +6,7 @@ import { mapBook } from '@/utils/mappers';
 import BookCard from '@/components/books/BookCard';
 import RecommendedBooks from '@/components/books/RecommendedBooks';
 
-export default function BooksSection({ searchTerm, selectedCategory }: any) {
+export default function BooksSection({ searchTerm, selectedCategory, onRequireAuth }: any) {
   const [books, setBooks] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -36,7 +36,7 @@ export default function BooksSection({ searchTerm, selectedCategory }: any) {
         <div className="empty-state"><p>Không tìm thấy sách nào</p></div>
       ) : (
         <div className="grid-3">{filteredBooks.map((book: any) => (
-          <BookCard key={book.id} book={book} />
+          <BookCard key={book.id} book={book} onRequireAuth={onRequireAuth} />
         ))}</div>
       )}
     </div>
