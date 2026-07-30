@@ -77,6 +77,7 @@ export default function BooksSection() {
     setSubmitting(true);
     try {
       const { _file, image_url, ...data } = payload;
+      if (data.isbn === bookModal?.isbn) delete data.isbn;
       await updateBookApi(bookModal.id, data);
       if (_file) { await uploadBookImageApi(bookModal.id, _file); }
       showToast('Cập nhật thông tin sách thành công!', 'success');
