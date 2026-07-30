@@ -440,7 +440,18 @@ export async function getDashboardTopBooksApi(limit?: number, input?: { from_dat
   );
   return data.dashboardTopBorrowedBooks;
 }
-
+export async function getDashboardTimelineApi(input: { from_date: string; to_date: string; group_by: string }) {
+  const data = await gql<{ dashboardTimeline: any[] }>(
+    `query DashboardTimeline($input: DashboardTimelineInput!) {
+      dashboardTimeline(input: $input) {
+        period_start label new_users cumulative_users
+        loan_count rental_revenue fine_revenue lost_book_revenue total_revenue
+      }
+    }`,
+    { input },
+  );
+  return data.dashboardTimeline;
+}
 export async function getPermissionsApi() {
   const data = await gql<{ permissions: { code: string; label: string; group: string }[] }>(
     `query Permissions { permissions { code label group } }`,
