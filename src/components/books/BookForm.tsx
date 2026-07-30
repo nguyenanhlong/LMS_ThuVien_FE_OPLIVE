@@ -111,6 +111,7 @@ export default function BookForm({ initialData, onSubmit, onCancel, loading }: a
       fee_per_month: Number(form.fee_per_month),
     };
     if (!payload.isbn) delete payload.isbn;
+    else if (initialData && payload.isbn === initialData.isbn) delete payload.isbn;
     onSubmit({ ...payload, _file: file });
   };
 

@@ -81,22 +81,34 @@ export default function BookDetail({ book }: any) {
           </p>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '32px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '32px' }}>
           {[
             { label: 'ID sách', value: book.id },
             { label: 'Thể loại', value: book.category },
             { label: 'Tác giả', value: book.author },
-            { label: 'Trạng thái', value: book.status },
+            { label: 'Trạng thái', value: book.status === 'AVAILABLE' ? 'Sẵn sàng' : 'Đang mượn' },
+            { label: 'ISBN', value: book.isbn || '—' },
+            { label: 'Nhà xuất bản', value: book.publisher || '—' },
+            { label: 'Năm XB', value: book.publisher_year || '—' },
+            { label: 'Số lượng', value: `${book.borrowedQuantity ?? book.borrowed_quantity ?? 0}/${book.totalQuantity ?? book.total_quantity ?? 0}` },
+            { label: 'Còn lại', value: `${book.available_quantity ?? 0}` },
+            { label: 'Số ngày mượn tối đa', value: book.max_borrow_days ? `${book.max_borrow_days} ngày` : '—' },
+            { label: 'Tiền cọc', value: book.deposit_amount ? `${Number(book.deposit_amount).toLocaleString('vi-VN')}₫` : '—' },
+            { label: 'Phí trễ hạn/ngày', value: book.fine_per_day ? `${Number(book.fine_per_day).toLocaleString('vi-VN')}₫` : '—' },
+            { label: 'Phí thay thế', value: book.replacement_cost ? `${Number(book.replacement_cost).toLocaleString('vi-VN')}₫` : '—' },
+            { label: 'Phí thuê/ngày', value: book.fee_per_day ? `${Number(book.fee_per_day).toLocaleString('vi-VN')}₫` : '—' },
+            { label: 'Phí thuê/tuần', value: book.fee_per_week ? `${Number(book.fee_per_week).toLocaleString('vi-VN')}₫` : '—' },
+            { label: 'Phí thuê/tháng', value: book.fee_per_month ? `${Number(book.fee_per_month).toLocaleString('vi-VN')}₫` : '—' },
           ].map(({ label, value }) => (
             <div key={label} style={{
               background: 'rgba(255,255,255,0.04)',
               borderRadius: '10px',
-              padding: '16px',
+              padding: '12px',
             }}>
-              <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '6px' }}>
+              <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '4px' }}>
                 {label}
               </div>
-              <div style={{ fontWeight: 600 }}>{value}</div>
+              <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{value}</div>
             </div>
           ))}
         </div>
