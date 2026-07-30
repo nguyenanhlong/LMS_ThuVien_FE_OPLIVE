@@ -17,7 +17,7 @@ import FavoritesSection from './FavoritesSection';
 import AuthModal from '@/components/auth/AuthModal';
 
 type Section = 'books' | 'cart' | 'loans' | 'profile' | 'favorites';
-type NavKey = 'home' | 'search' | 'category' | 'recommend' | 'favorites' | 'cart' | 'shelf';
+type NavKey = 'home' | 'search' | 'category' | 'favorites' | 'cart' | 'shelf';
 
 const ACTIVE_LOAN_STATUSES = ['PENDING', 'PENDING_PAYMENT', 'BORROWING'];
 const CATEGORIES = ['Tất cả', 'Kỹ năng sống', 'Tiểu thuyết', 'Khoa học', 'Tài chính'];
@@ -40,7 +40,6 @@ function MemberModuleInner() {
   const [loanRefreshKey, setLoanRefreshKey] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Tất cả');
-  const [pendingAnchor, setPendingAnchor] = useState<string | null>(null);
   const [activeLoanCount, setActiveLoanCount] = useState(0);
   const [activeNavKey, setActiveNavKey] = useState<NavKey>('home');
   const [showAuth, setShowAuth] = useState(false);
@@ -72,24 +71,12 @@ function MemberModuleInner() {
       .catch(() => {});
   }, [user, loanRefreshKey]);
 
-  useEffect(() => {
-    if (!pendingAnchor || section !== 'books') return;
-    document.getElementById(pendingAnchor)?.scrollIntoView({ behavior: 'smooth' });
-    setPendingAnchor(null);
-  }, [pendingAnchor, section]);
-
   const handleGoHome = () => {
     setSearchTerm('');
     setSelectedCategory('Tất cả');
     setSection('books');
     setActiveNavKey('home');
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const handleGoToRecommend = () => {
-    setSection('books');
-    setActiveNavKey('recommend');
-    setPendingAnchor('recommended-books');
   };
 
   const handleGoToCart = () => {
@@ -139,7 +126,6 @@ function MemberModuleInner() {
         onClick: () => handleSelectCategory(c),
       })),
     },
-    { key: 'recommend', label: 'Gợi ý', active: activeNavKey === 'recommend', onClick: handleGoToRecommend },
     { key: 'favorites', label: 'Yêu thích', active: activeNavKey === 'favorites', badge: favoriteIds.size, onClick: handleGoToFavorites },
     { key: 'cart', label: 'Giỏ hàng', active: activeNavKey === 'cart', badge: cartItems.length, onClick: handleGoToCart },
     { key: 'shelf', label: 'Kệ sách', active: activeNavKey === 'shelf', badge: activeLoanCount, onClick: handleGoToLoans },
