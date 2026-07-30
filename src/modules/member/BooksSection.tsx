@@ -4,8 +4,9 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { getBooksApi } from '@/lib/api';
 import { mapBook } from '@/utils/mappers';
 import BookCard from '@/components/books/BookCard';
+import RecommendedBooks from '@/components/books/RecommendedBooks';
 
-const PAGE_SIZE = 9;
+const PAGE_SIZE = 12;
 
 export default function BooksSection({ searchTerm, selectedCategory, onRequireAuth }: any) {
   const [books, setBooks] = useState<any[]>([]);
@@ -47,8 +48,10 @@ export default function BooksSection({ searchTerm, selectedCategory, onRequireAu
 
   return (
     <div>
+      <RecommendedBooks />
+
       {loading ? (
-        <div className="loading-grid">{[1, 2, 3, 4, 5, 6].map((i) => <div key={i} className="book-card-skeleton" />)}</div>
+        <div className="loading-grid">{Array.from({ length: PAGE_SIZE }, (_, i) => <div key={i} className="book-card-skeleton" />)}</div>
       ) : !filteredBooks.length ? (
         <div className="empty-state"><p>Không tìm thấy sách nào</p></div>
       ) : (
