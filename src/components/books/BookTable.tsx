@@ -33,8 +33,11 @@ export default function BookTable({
             <thead>
               <tr>
                 <th>Tên Sách</th>
+                <th>ISBN</th>
                 <th>Tác Giả</th>
+                <th>NXB</th>
                 <th>Thể Loại</th>
+                <th>Số Lượng</th>
                 <th>Trạng Thái</th>
                 <th>Hành Động</th>
               </tr>
@@ -52,11 +55,16 @@ export default function BookTable({
                       <span style={{ fontWeight: 600 }}>{book.title}</span>
                     </div>
                   </td>
+                  <td style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>{book.isbn || '—'}</td>
                   <td>{book.author}</td>
+                  <td style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>{book.publisher || '—'}</td>
                   <td><span className="category-tag">{book.category || '—'}</span></td>
+                  <td style={{ fontSize: '0.8125rem' }}>
+                    <span>{book.borrowed_quantity ?? 0}/{book.total_quantity ?? 0}</span>
+                  </td>
                   <td>
                     <span className={`badge ${book.available_quantity > 0 ? 'badge-success' : 'badge-danger'}`}>
-                      {book.available_quantity > 0 ? `Còn ${book.available_quantity}/${book.total_quantity}` : 'Hết sách'}
+                      {book.available_quantity > 0 ? `Còn ${book.available_quantity}` : 'Hết sách'}
                     </span>
                     {!book.is_active && (
                       <span className="badge badge-danger" style={{ marginLeft: 6 }}>Ngừng cho mượn</span>

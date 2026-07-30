@@ -7,6 +7,7 @@ import {
 } from '@/lib/api';
 import { mapLoan } from '@/utils/mappers';
 import LoanTable, { LOAN_STATUS_MAP } from '@/components/loans/LoanTable';
+import LoanDetailModal from '@/components/loans/LoanDetailModal';
 import LoanHistory from '@/components/loans/LoanHistory';
 import ReturnModal from '@/components/loans/ReturnModal';
 import CancelLoanModal from '@/components/loans/CancelLoanModal';
@@ -18,6 +19,7 @@ export default function LoansSection() {
   const [loans, setLoans] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [detailModal, setDetailModal] = useState<any>(null);
   const [returnModal, setReturnModal] = useState<any>(null);
   const [cancelLoanId, setCancelLoanId] = useState<string | null>(null);
   const [filter, setFilter] = useState('ALL');
@@ -102,7 +104,12 @@ export default function LoansSection() {
     setSubmitting(false);
   };
 
+  const openDetailModal = (loan: any) => {
+    setDetailModal(loan);
+  };
+
   const openReturnModal = async (loan: any) => {
+    setDetailModal(null);
     try {
       const full = await getLoanByIdApi(loan.id);
       setReturnModal(mapLoan(full));
@@ -137,7 +144,7 @@ export default function LoansSection() {
           <h2 className="section-title" style={{ color: 'var(--error)', marginBottom: 12 }}>
             {'⚠ Có'} {overdueLoans.length} {'phiếu mượn QUÁ HẠN cần xử lý gấp'}
           </h2>
-          <LoanTable loans={overdueLoans} loading={loading} role="MANAGER" onReturn={openReturnModal} />
+          <LoanTable loans={overdueLoans} loading={loading} role="MANAGER" onReturn={openReturnModal} onViewDetail={openDetailModal} />
         </div>
       )}
 
@@ -160,6 +167,7 @@ export default function LoansSection() {
         onBorrowing={handleBorrowing}
         onCancel={handleCancel}
         onReturn={openReturnModal}
+        onViewDetail={openDetailModal}
       />
 
       {doneLoans.length > 0 && filter === 'ALL' && (
@@ -169,6 +177,11 @@ export default function LoansSection() {
         </div>
       )}
 
+      <LoanDetailModal
+        loan={detailModal}
+        onClose={() => setDetailModal(null)}
+        onReturn={openReturnModal}
+      />
       <ReturnModal
         open={!!returnModal}
         loan={returnModal}

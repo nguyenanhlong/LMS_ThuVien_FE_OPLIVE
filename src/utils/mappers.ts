@@ -24,6 +24,8 @@ export function mapBook(b: any) {
     title: b.title,
     isbn: b.isbn || '',
     author: b.author || '',
+    publisher: b.publisher || '',
+    publisher_year: b.publisher_year || null,
     category: b.sub_category?.category?.name || b.sub_category?.name || 'Khác',
     description: b.description || '',
     image_url: resolveImageUrl(b.image_url),

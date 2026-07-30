@@ -149,6 +149,32 @@ export function setCachedPermissions(role: string, perms: string[]) {
   localStorage.setItem(`permissions_${role}`, JSON.stringify(perms));
 }
 
+export function getCachedPermSignature(role: string): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem(`perm_sig_${role}`);
+}
+
+export function setCachedPermSignature(role: string, signature: string) {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(`perm_sig_${role}`, signature);
+}
+
+export function clearCachedPermSignature(role: string) {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem(`perm_sig_${role}`);
+}
+
+export async function fetchAndCachePermissions(role: string): Promise<string[]> {
+  try {
+    const data = await getRolePermissionsByRoleApi(role);
+    const perms = (Array.isArray(data) ? data : []).map((p: any) => p.permission);
+    setCachedPermissions(role, perms);
+    return perms;
+  } catch {
+    return getCachedPermissions(role);
+  }
+}
+
 export async function createBookApi(data: any) {
   const result = await gql<{ createBook: any }>(
     `mutation CreateBook($input: CreateBookInput!) { createBook(input: $input) { id } }`,
@@ -282,18 +308,20 @@ export async function getSubCategoriesApi(categoryId?: number) {
   return data.subCategories;
 }
 
-export async function createSubCategoryApi(category_id: number, name: string) {
+export async function createSubCategoryApi(category_id: number | string, name: string) {
   const data = await gql<{ createSubCategory: any }>(
     `mutation CreateSubCategory($input: CreateSubCategoryInput!) { createSubCategory(input: $input) { id name category_id } }`,
-    { input: { category_id, name } },
+    { input: { category_id: Number(category_id), name } },
   );
   return data.createSubCategory;
 }
 
-export async function updateSubCategoryApi(id: string | number, data: { category_id?: number; name?: string }) {
+export async function updateSubCategoryApi(id: string | number, data: { category_id?: number | string; name?: string }) {
+  const input: any = { ...data };
+  if (input.category_id !== undefined) input.category_id = Number(input.category_id);
   const result = await gql<{ updateSubCategory: any }>(
     `mutation UpdateSubCategory($id: ID!, $input: UpdateSubCategoryInput!) { updateSubCategory(id: $id, input: $input) { id name category_id } }`,
-    { id: String(id), input: data },
+    { id: String(id), input },
   );
   return result.updateSubCategory;
 }
@@ -411,4 +439,22 @@ export async function getDashboardTopBooksApi(limit?: number, input?: { from_dat
     { limit, input },
   );
   return data.dashboardTopBorrowedBooks;
+}
+export async function getDashboardTimelineApi(input: { from_date: string; to_date: string; group_by: string }) {
+  const data = await gql<{ dashboardTimeline: any[] }>(
+    `query DashboardTimeline($input: DashboardTimelineInput!) {
+      dashboardTimeline(input: $input) {
+        period_start label new_users cumulative_users
+        loan_count rental_revenue fine_revenue lost_book_revenue total_revenue
+      }
+    }`,
+    { input },
+  );
+  return data.dashboardTimeline;
+}
+export async function getPermissionsApi() {
+  const data = await gql<{ permissions: { code: string; label: string; group: string }[] }>(
+    `query Permissions { permissions { code label group } }`,
+  );
+  return data.permissions;
 }
