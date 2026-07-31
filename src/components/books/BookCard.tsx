@@ -1,7 +1,7 @@
- 'use client';
+'use client';
 
 import Link from 'next/link';
-import { ArrowRightIcon, HeartIcon } from '@/components/ui/icons';
+import { HeartIcon } from '@/components/ui/icons';
 import { getCover } from '@/lib/category-covers';
 import { useCart } from '@/context/CartContext';
 import { useFavorites } from '@/context/FavoritesContext';
@@ -20,36 +20,40 @@ export default function BookCard({ book, onRequireAuth }: { book: any; onRequire
     addItem(book);
   };
 
-  const handleToggleFavorite = () => {
+  const handleToggleFavorite = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     if (!user) { onRequireAuth(); return; }
     toggleFavorite(book.id);
   };
 
   return (
     <div className="book-card glass-panel">
-      <div className="book-cover" style={{ background: book.image_url ? undefined : cover.gradient }}>
-        {book.image_url && <img src={book.image_url} alt={book.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
-        <div className="book-cover-overlay" />
-        <span className={`book-cover-badge ${book.status === 'AVAILABLE' ? 'badge-success' : 'badge-danger'}`}>
-          {book.status === 'AVAILABLE' ? 'Sẵn sàng' : 'Đã mượn'}
-        </span>
-        <button
-          onClick={handleToggleFavorite}
-          className={`book-cover-favorite ${favorite ? 'active' : ''}`}
-          aria-label={favorite ? 'Bỏ khỏi yêu thích' : 'Thêm vào yêu thích'}
-          title={favorite ? 'Bỏ khỏi yêu thích' : 'Thêm vào yêu thích'}
-        >
-          <HeartIcon filled={favorite} />
-        </button>
-      </div>
-      <div className="book-card-body">
-        <span className="book-category" style={{ color: cover.accent }}>{book.category}</span>
-        <h3 className="book-title">{book.title}</h3>
-        <div className="book-author">{book.author}</div>
-        {book.publisher && <div className="book-author" style={{ fontSize: '0.75rem', opacity: 0.6 }}>{book.publisher}</div>}
-        <p className="book-desc">{book.description || 'Chưa có mô tả chi tiết.'}</p>
-      </div>
-      <div className="book-card-footer" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      <Link href={`/books/${book.id}`} className="book-card-link" id={`detail-link-${book.id}`}>
+        <div className="book-cover" style={{ background: book.image_url ? undefined : cover.gradient }}>
+          {book.image_url && <img src={book.image_url} alt={book.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
+          <div className="book-cover-overlay" />
+          <span className={`book-cover-badge ${book.status === 'AVAILABLE' ? 'badge-success' : 'badge-danger'}`}>
+            {book.status === 'AVAILABLE' ? 'Sẵn sàng' : 'Đã mượn'}
+          </span>
+          <button
+            onClick={handleToggleFavorite}
+            className={`book-cover-favorite ${favorite ? 'active' : ''}`}
+            aria-label={favorite ? 'Bỏ khỏi yêu thích' : 'Thêm vào yêu thích'}
+            title={favorite ? 'Bỏ khỏi yêu thích' : 'Thêm vào yêu thích'}
+          >
+            <HeartIcon filled={favorite} />
+          </button>
+        </div>
+        <div className="book-card-body">
+          <span className="book-category" style={{ color: cover.accent }}>{book.category}</span>
+          <h3 className="book-title">{book.title}</h3>
+          <div className="book-author">{book.author}</div>
+          {book.publisher && <div className="book-author" style={{ fontSize: '0.75rem', opacity: 0.6 }}>{book.publisher}</div>}
+          <p className="book-desc">{book.description || 'Chưa có mô tả chi tiết.'}</p>
+        </div>
+      </Link>
+      <div className="book-card-footer">
         {book.status === 'AVAILABLE' ? (
           <button
             onClick={handleAddToCart}
@@ -64,14 +68,6 @@ export default function BookCard({ book, onRequireAuth }: { book: any; onRequire
             Không Sẵn Sàng
           </button>
         )}
-        <Link
-          href={`/books/${book.id}`}
-          className="btn btn-secondary btn-full"
-          style={{ textDecoration: 'none', textAlign: 'center' }}
-          id={`detail-btn-${book.id}`}
-        >
-          Xem Chi Tiết <ArrowRightIcon />
-        </Link>
       </div>
     </div>
   );
