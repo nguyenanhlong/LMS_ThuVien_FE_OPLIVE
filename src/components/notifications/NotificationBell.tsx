@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { getMyNotificationsApi, markNotificationsReadApi, getRolePermissionsByRoleApi, getCachedPermSignature, setCachedPermSignature, clearCachedPermSignature } from '@/lib/api';
+import { getMyNotificationsApi, markNotificationsReadApi, getRolePermissionsByRoleApi, getCachedPermSignature, setCachedPermSignature, clearCachedPermSignature, getToken } from '@/lib/api';
+import { connectNotifications, disconnectNotifications, subscribeToNewNotifications, type RealtimeNotification } from '@/lib/socket';
 
 interface Notification {
   id: number;
@@ -91,6 +92,26 @@ export default function NotificationBell({ userRole }: { userRole?: string }) {
       window.removeEventListener('focus', onFocus);
     };
   }, [fetchNotifications, checkPermissionChange, userRole]);
+
+  useEffect(() => {
+    if (!userRole) return;
+    const token = getToken();
+    const socket = connectNotifications(token);
+    if (!socket) return;
+
+    const handleNew = (notification: RealtimeNotification) => {
+      setNotifications((prev) => {
+        if (prev.some((n) => n.id === notification.id)) return prev;
+        return [notification, ...prev];
+      });
+    };
+    const unsubscribe = subscribeToNewNotifications(handleNew);
+
+    return () => {
+      unsubscribe();
+      disconnectNotifications();
+    };
+  }, [userRole]);
 
   useEffect(() => {
     if (!open) return;
