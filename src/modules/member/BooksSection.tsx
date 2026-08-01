@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { getBooksApi } from '@/lib/api';
 import { mapBook } from '@/utils/mappers';
 import BookCard from '@/components/books/BookCard';
@@ -8,55 +8,74 @@ import RecommendedBooks from '@/components/books/RecommendedBooks';
 
 const PAGE_SIZE = 12;
 
-export default function BooksSection({ searchTerm, selectedCategory, onRequireAuth }: any) {
+export default function BooksSection({
+  searchTerm,
+  selectedCategoryId,
+  subCategories,
+  selectedSubCategoryId,
+  onSelectSubCategory,
+  showRecommended,
+  onRequireAuth,
+}: any) {
   const [books, setBooks] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
   const fetchBooks = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await getBooksApi({ keyword: searchTerm });
+      const data = await getBooksApi({
+        keyword: searchTerm,
+        category_id: selectedCategoryId ?? undefined,
+        sub_category_id: selectedSubCategoryId ?? undefined,
+        page,
+        pageSize: PAGE_SIZE,
+      });
       setBooks((data.items || []).map(mapBook));
-    } catch { setBooks([]); }
+      setTotalPages(Math.max(1, data.totalPages || 1));
+    } catch {
+      setBooks([]);
+      setTotalPages(1);
+    }
     setLoading(false);
-  }, [searchTerm]);
+  }, [searchTerm, selectedCategoryId, selectedSubCategoryId, page]);
 
   useEffect(() => { fetchBooks(); }, [fetchBooks]);
 
-  const filteredBooks = useMemo(() => {
-    if (selectedCategory === 'Tất cả') return books;
-    return books.filter((b: any) => b.category === selectedCategory);
-  }, [books, selectedCategory]);
+  // Đổi từ khóa tìm kiếm, thể loại hoặc thể loại con thì quay lại trang 1.
+  useEffect(() => { setPage(1); }, [searchTerm, selectedCategoryId, selectedSubCategoryId]);
 
-  // Đổi từ khóa tìm kiếm hoặc thể loại thì quay lại trang 1.
-  useEffect(() => { setPage(1); }, [searchTerm, selectedCategory]);
-
-  const totalPages = Math.max(1, Math.ceil(filteredBooks.length / PAGE_SIZE));
-
-  // Nếu danh sách ngắn lại (vd. đổi bộ lọc) khiến trang hiện tại vượt quá tổng số trang thì kéo về trang cuối.
-  useEffect(() => {
-    if (page > totalPages) setPage(totalPages);
-  }, [page, totalPages]);
-
-  const pagedBooks = useMemo(
-    () => filteredBooks.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
-    [filteredBooks, page],
-  );
-
-  const pageNumbers = useMemo(() => Array.from({ length: totalPages }, (_, i) => i + 1), [totalPages]);
+  const pageNumbers = Array.from({ length: totalPages }, (_, i) => i + 1);
 
   return (
     <div>
-      <RecommendedBooks />
+      {showRecommended && <RecommendedBooks />}
+
+      {!!subCategories?.length && (
+        <div className="sub-category-select-wrap">
+          <label htmlFor="sub-category-select">Danh mục con</label>
+          <select
+            id="sub-category-select"
+            className="form-control sub-category-select"
+            value={selectedSubCategoryId ?? ''}
+            onChange={(e) => onSelectSubCategory(e.target.value ? Number(e.target.value) : null)}
+          >
+            <option value="">Tất cả</option>
+            {subCategories.map((sc: { id: number; name: string }) => (
+              <option key={sc.id} value={sc.id}>{sc.name}</option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {loading ? (
         <div className="loading-grid">{Array.from({ length: PAGE_SIZE }, (_, i) => <div key={i} className="book-card-skeleton" />)}</div>
-      ) : !filteredBooks.length ? (
+      ) : !books.length ? (
         <div className="empty-state"><p>Không tìm thấy sách nào</p></div>
       ) : (
         <>
-          <div className="grid-3">{pagedBooks.map((book: any) => (
+          <div className="grid-3">{books.map((book: any) => (
             <BookCard key={book.id} book={book} onRequireAuth={onRequireAuth} />
           ))}</div>
 
