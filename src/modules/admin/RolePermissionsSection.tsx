@@ -8,13 +8,14 @@ const ROLES = ['GUEST', 'LIBRARIAN', 'MEMBER'];
 
 const PRIORITY = ['VIEW', 'CREATE', 'UPDATE', 'DELETE'];
 
-const GUEST_ALLOWED = new Set(['BOOK_VIEW', 'CATEGORY_VIEW', 'SUB_CATEGORY_VIEW']);
+const GUEST_FALLBACK_ALLOWED = new Set(['BOOK_VIEW', 'CATEGORY_VIEW', 'SUB_CATEGORY_VIEW']);
 
 export default function RolePermissionsSection() {
   const [selectedRole, setSelectedRole] = useState<string>('LIBRARIAN');
   const [permissions, setPermissions] = useState<Set<string>>(new Set());
   const [originalPerms, setOriginalPerms] = useState<Set<string>>(new Set());
   const [allMeta, setAllMeta] = useState<{ code: string; label: string; group: string }[]>([]);
+  const [guestAllowed, setGuestAllowed] = useState<Set<string>>(GUEST_FALLBACK_ALLOWED);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [confirmData, setConfirmData] = useState<{
@@ -32,6 +33,12 @@ export default function RolePermissionsSection() {
   useEffect(() => {
     getPermissionsApi()
       .then((data) => setAllMeta(data || []))
+      .catch(() => {});
+    getRolePermissionsByRoleApi('GUEST')
+      .then((data) => {
+        const perms = new Set((Array.isArray(data) ? data : []).map((p: any) => p.permission));
+        if (perms.size > 0) setGuestAllowed(perms);
+      })
       .catch(() => {});
   }, []);
 
@@ -63,10 +70,10 @@ export default function RolePermissionsSection() {
 
   const handleSave = async () => {
     const currentPerms = selectedRole === 'GUEST'
-      ? Array.from(permissions).filter(p => GUEST_ALLOWED.has(p))
+      ? Array.from(permissions).filter(p => guestAllowed.has(p))
       : Array.from(permissions);
     const originalArr = selectedRole === 'GUEST'
-      ? Array.from(originalPerms).filter(p => GUEST_ALLOWED.has(p))
+      ? Array.from(originalPerms).filter(p => guestAllowed.has(p))
       : Array.from(originalPerms);
 
     const currentSet = new Set(currentPerms);
@@ -109,7 +116,7 @@ export default function RolePermissionsSection() {
 
   const grouped: Record<string, { key: string; label: string }[]> = {};
   for (const meta of allMeta) {
-    if (selectedRole === 'GUEST' && !GUEST_ALLOWED.has(meta.code)) continue;
+    if (selectedRole === 'GUEST' && !guestAllowed.has(meta.code)) continue;
     if (!grouped[meta.group]) grouped[meta.group] = [];
     grouped[meta.group].push({ key: meta.code, label: meta.label });
   }
