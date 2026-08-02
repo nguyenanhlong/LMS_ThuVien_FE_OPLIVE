@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
 
-export default function BookDetail({ book, onRequireAuth }: any) {
+export default function BookDetail({ book, onRequireAuth, isStaff }: any) {
   const cover = getCover(book.category);
   const { user } = useAuth();
   const { addItem, isInCart } = useCart();
@@ -16,6 +16,40 @@ export default function BookDetail({ book, onRequireAuth }: any) {
   const handleAddToCart = () => {
     if (!user) { onRequireAuth?.(); return; }
     addItem(book);
+  };
+
+  const renderActions = () => {
+    if (isStaff) {
+      return (
+        <div style={{
+          background: 'rgba(255,255,255,0.04)',
+          borderRadius: '12px',
+          padding: '16px 24px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          color: 'var(--text-muted)',
+          fontSize: '0.95rem',
+        }}>
+          <span>Bạn đang xem thông tin sách ở chế độ quản lý.</span>
+        </div>
+      );
+    }
+
+    return book.status === 'AVAILABLE' ? (
+      <button
+        onClick={handleAddToCart}
+        className={`btn ${inCart ? 'btn-secondary' : 'btn-primary'}`}
+        disabled={inCart}
+        style={{ padding: '14px 32px', fontSize: '1rem' }}
+      >
+        {inCart ? 'Đã Có Trong Giỏ' : 'Thêm Vào Giỏ Hàng'}
+      </button>
+    ) : (
+      <button className="btn btn-secondary" disabled style={{ padding: '14px 32px', fontSize: '1rem', opacity: 0.5, cursor: 'not-allowed' }}>
+        Không Sẵn Sàng Cho Mượn
+      </button>
+    );
   };
 
   return (
@@ -123,20 +157,7 @@ export default function BookDetail({ book, onRequireAuth }: any) {
           ))}
         </div>
 
-        {book.status === 'AVAILABLE' ? (
-          <button
-            onClick={handleAddToCart}
-            className={`btn ${inCart ? 'btn-secondary' : 'btn-primary'}`}
-            disabled={inCart}
-            style={{ padding: '14px 32px', fontSize: '1rem' }}
-          >
-            {inCart ? 'Đã Có Trong Giỏ' : 'Thêm Vào Giỏ Hàng'}
-          </button>
-        ) : (
-          <button className="btn btn-secondary" disabled style={{ padding: '14px 32px', fontSize: '1rem', opacity: 0.5, cursor: 'not-allowed' }}>
-            Không Sẵn Sàng Cho Mượn
-          </button>
-        )}
+        {renderActions()}
       </div>
     </div>
   );
