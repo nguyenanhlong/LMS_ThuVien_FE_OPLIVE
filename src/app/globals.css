@@ -504,6 +504,42 @@ input, select, textarea {
   background: rgba(99, 102, 241, 0.12);
 }
 
+.header-nav-mega {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 10px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+  z-index: 110;
+  overflow: hidden;
+}
+
+.header-nav-mega.open {
+  display: flex;
+}
+
+.header-nav-mega-col {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+  min-width: 190px;
+}
+
+.header-nav-mega-col-sub {
+  border-left: 1px solid var(--border);
+  min-width: 210px;
+}
+
+.header-nav-dropdown-link.hovered {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-primary);
+}
+
 .header-search {
   display: flex;
   align-items: center;
@@ -918,6 +954,26 @@ input, select, textarea {
   justify-content: center;
   flex-wrap: wrap;
   margin-top: 16px;
+}
+
+.sub-category-select-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.sub-category-select-wrap label {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.sub-category-select {
+  width: auto;
+  min-width: 220px;
+  padding: 8px 14px;
+  cursor: pointer;
 }
 
 .category-pill {
@@ -2069,6 +2125,8 @@ input, select, textarea {
   }
   .header-right { flex-wrap: wrap; justify-content: flex-end; row-gap: 10px; }
   .header-search { flex-basis: 100%; min-width: 0; order: 3; }
+  .header-nav-mega { flex-direction: column; max-width: calc(100vw - 32px); }
+  .header-nav-mega-col-sub { border-left: none; border-top: 1px solid var(--border); }
 }
 
 .profile-section {

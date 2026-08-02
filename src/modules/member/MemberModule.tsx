@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { CartProvider, useCart } from '@/context/CartContext';
 import { FavoritesProvider, useFavorites } from '@/context/FavoritesContext';
-import { getLoansApi } from '@/lib/api';
+import { getLoansApi, getCategoriesApi } from '@/lib/api';
 import Header, { HeaderNavItem } from '@/components/layout/Header';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
@@ -20,7 +20,6 @@ type Section = 'books' | 'cart' | 'loans' | 'profile' | 'favorites';
 type NavKey = 'home' | 'search' | 'category' | 'favorites' | 'cart' | 'shelf';
 
 const ACTIVE_LOAN_STATUSES = ['PENDING', 'PENDING_PAYMENT', 'BORROWING'];
-const CATEGORIES = ['Tất cả', 'Kỹ năng sống', 'Tiểu thuyết', 'Khoa học', 'Tài chính'];
 
 export default function MemberModule() {
   return (
@@ -39,7 +38,9 @@ function MemberModuleInner() {
   const [section, setSection] = useState<Section>('books');
   const [loanRefreshKey, setLoanRefreshKey] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('Tất cả');
+  const [categories, setCategories] = useState<{ id: number; name: string; subCategories: { id: number; name: string }[] }[]>([]);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
+  const [selectedSubCategoryId, setSelectedSubCategoryId] = useState<number | null>(null);
   const [activeLoanCount, setActiveLoanCount] = useState(0);
   const [activeNavKey, setActiveNavKey] = useState<NavKey>('home');
   const [showAuth, setShowAuth] = useState(false);
@@ -62,7 +63,7 @@ function MemberModuleInner() {
   };
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) { setActiveLoanCount(0); return; }
     getLoansApi()
       .then((data) => {
         const items = data.items || [];
@@ -71,9 +72,35 @@ function MemberModuleInner() {
       .catch(() => {});
   }, [user, loanRefreshKey]);
 
+  // Đăng xuất xong thì reset lại toàn bộ trạng thái đang xem (mục đang chọn, tìm kiếm,
+  // bộ lọc thể loại...) để tài khoản đăng nhập sau không thấy lại ngữ cảnh của người trước.
+  const prevUserRef = useRef(user);
+  useEffect(() => {
+    if (prevUserRef.current && !user) {
+      setSection('books');
+      setSearchTerm('');
+      setSelectedCategoryId(null);
+      setSelectedSubCategoryId(null);
+      setActiveNavKey('home');
+      setShowAuth(false);
+    }
+    prevUserRef.current = user;
+  }, [user]);
+
+  useEffect(() => {
+    getCategoriesApi()
+      .then((data) => setCategories((data || []).map((c: { id: string | number; name: string; sub_categories?: { id: string | number; name: string }[] }) => ({
+        id: Number(c.id),
+        name: c.name,
+        subCategories: (c.sub_categories || []).map((s) => ({ id: Number(s.id), name: s.name })),
+      }))))
+      .catch(() => setCategories([]));
+  }, []);
+
   const handleGoHome = () => {
     setSearchTerm('');
-    setSelectedCategory('Tất cả');
+    setSelectedCategoryId(null);
+    setSelectedSubCategoryId(null);
     setSection('books');
     setActiveNavKey('home');
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -105,26 +132,46 @@ function MemberModuleInner() {
     setActiveNavKey('favorites');
   };
 
-  const handleSelectCategory = (category: string) => {
-    setSelectedCategory(category);
+  const handleSelectCategory = (categoryId: number | null, subCategoryId: number | null = null) => {
+    setSelectedCategoryId(categoryId);
+    setSelectedSubCategoryId(subCategoryId);
     setSection('books');
     setActiveNavKey('category');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const handleSelectSubCategory = (subCategoryId: number | null) => {
+    setSelectedSubCategoryId(subCategoryId);
+  };
+
+  const selectedCategoryName = categories.find((c) => c.id === selectedCategoryId)?.name;
+  const selectedSubCategoryName = categories
+    .find((c) => c.id === selectedCategoryId)
+    ?.subCategories.find((s) => s.id === selectedSubCategoryId)?.name;
+  const currentSubCategories = categories.find((c) => c.id === selectedCategoryId)?.subCategories || [];
+
   const navItems: HeaderNavItem[] = [
     { key: 'home', label: 'Trang chủ', active: activeNavKey === 'home', onClick: handleGoHome },
     {
       key: 'category',
-      label: selectedCategory === 'Tất cả' ? 'Thể loại' : `Thể loại: ${selectedCategory}`,
+      label: selectedCategoryId === null ? 'Thể loại' : `Thể loại: ${selectedSubCategoryName || selectedCategoryName}`,
       active: activeNavKey === 'category',
       onClick: () => {},
-      dropdown: CATEGORIES.map((c) => ({
-        key: c,
-        label: c,
-        active: activeNavKey === 'category' && selectedCategory === c,
-        onClick: () => handleSelectCategory(c),
-      })),
+      megaMenu: [
+        { key: 'all', label: 'Tất cả', active: activeNavKey === 'category' && selectedCategoryId === null, onClick: () => handleSelectCategory(null) },
+        ...categories.map((c) => ({
+          key: String(c.id),
+          label: c.name,
+          active: activeNavKey === 'category' && selectedCategoryId === c.id && selectedSubCategoryId === null,
+          onClick: () => handleSelectCategory(c.id),
+          children: c.subCategories.map((s) => ({
+            key: `${c.id}-${s.id}`,
+            label: s.name,
+            active: activeNavKey === 'category' && selectedCategoryId === c.id && selectedSubCategoryId === s.id,
+            onClick: () => handleSelectCategory(c.id, s.id),
+          })),
+        })),
+      ],
     },
     { key: 'favorites', label: 'Yêu thích', active: activeNavKey === 'favorites', badge: favoriteIds.size, onClick: handleGoToFavorites },
     { key: 'cart', label: 'Giỏ hàng', active: activeNavKey === 'cart', badge: cartItems.length, onClick: handleGoToCart },
@@ -151,7 +198,11 @@ function MemberModuleInner() {
         {section === 'books' && (
           <BooksSection
             searchTerm={searchTerm}
-            selectedCategory={selectedCategory}
+            selectedCategoryId={selectedCategoryId}
+            subCategories={currentSubCategories}
+            selectedSubCategoryId={selectedSubCategoryId}
+            onSelectSubCategory={handleSelectSubCategory}
+            showRecommended={activeNavKey === 'home'}
             onRequireAuth={handleRequireAuth}
           />
         )}

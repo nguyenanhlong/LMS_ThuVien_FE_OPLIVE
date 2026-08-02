@@ -20,6 +20,14 @@ export interface HeaderNavDropdownItem {
   onClick: () => void;
 }
 
+export interface HeaderNavMegaMenuItem {
+  key: string;
+  label: string;
+  active: boolean;
+  onClick: () => void;
+  children?: HeaderNavDropdownItem[];
+}
+
 export interface HeaderNavItem {
   key: string;
   label: string;
@@ -27,6 +35,7 @@ export interface HeaderNavItem {
   badge?: number;
   onClick: () => void;
   dropdown?: HeaderNavDropdownItem[];
+  megaMenu?: HeaderNavMegaMenuItem[];
 }
 
 export default function Header({
@@ -60,6 +69,7 @@ export default function Header({
 
   const initial = user ? (user?.full_name || user?.username || '?').trim().charAt(0).toUpperCase() : '?';
   const [openKey, setOpenKey] = useState<string | null>(null);
+  const [megaHoverKey, setMegaHoverKey] = useState<string | null>(null);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const navRef = useRef<HTMLElement>(null);
   const accountRef = useRef<HTMLDivElement>(null);
@@ -83,8 +93,12 @@ export default function Header({
   }, [accountMenuOpen]);
 
   const handleNavClick = (item: HeaderNavItem) => {
-    if (item.dropdown) {
-      setOpenKey(openKey === item.key ? null : item.key);
+    if (item.dropdown || item.megaMenu) {
+      const willOpen = openKey !== item.key;
+      setOpenKey(willOpen ? item.key : null);
+      if (willOpen && item.megaMenu) {
+        setMegaHoverKey(item.megaMenu.find((m) => m.active)?.key ?? item.megaMenu[0]?.key ?? null);
+      }
     } else {
       item.onClick();
     }
@@ -127,11 +141,11 @@ export default function Header({
                     <button
                       onClick={() => handleNavClick(item)}
                       className={`header-nav-link ${item.active ? 'active' : ''}`}
-                      aria-expanded={item.dropdown ? openKey === item.key : undefined}
+                      aria-expanded={item.dropdown || item.megaMenu ? openKey === item.key : undefined}
                     >
                       {item.label}
                       {!!item.badge && <span className="header-nav-badge">{item.badge}</span>}
-                      {item.dropdown && (
+                      {(item.dropdown || item.megaMenu) && (
                         <svg
                           className={`header-nav-chevron ${openKey === item.key ? 'open' : ''}`}
                           width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
@@ -156,6 +170,45 @@ export default function Header({
                             )}
                           </button>
                         ))}
+                      </div>
+                    )}
+                    {item.megaMenu && (
+                      <div className={`header-nav-mega ${openKey === item.key ? 'open' : ''}`}>
+                        <div className="header-nav-mega-col">
+                          {item.megaMenu.map((m) => (
+                            <button
+                              key={m.key}
+                              onMouseEnter={() => setMegaHoverKey(m.key)}
+                              onClick={() => { m.onClick(); setOpenKey(null); }}
+                              className={`header-nav-dropdown-link ${m.active ? 'active' : ''} ${megaHoverKey === m.key ? 'hovered' : ''}`}
+                            >
+                              {m.label}
+                              {m.active && (
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                  <path d="M20 6 9 17l-5-5" />
+                                </svg>
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                        {!!item.megaMenu.find((m) => m.key === megaHoverKey)?.children?.length && (
+                          <div className="header-nav-mega-col header-nav-mega-col-sub">
+                            {item.megaMenu.find((m) => m.key === megaHoverKey)?.children!.map((s) => (
+                              <button
+                                key={s.key}
+                                onClick={() => { s.onClick(); setOpenKey(null); }}
+                                className={`header-nav-dropdown-link ${s.active ? 'active' : ''}`}
+                              >
+                                {s.label}
+                                {s.active && (
+                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                    <path d="M20 6 9 17l-5-5" />
+                                  </svg>
+                                )}
+                              </button>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
