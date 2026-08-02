@@ -6,6 +6,8 @@ import { getBookApi } from '@/lib/api';
 import { mapBook } from '@/utils/mappers';
 import BookDetail from '@/components/books/BookDetail';
 import { ArrowLeftIcon } from '@/components/ui/icons';
+import { CartProvider } from '@/context/CartContext';
+import AuthModal from '@/components/auth/AuthModal';
 
 export default function BookDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -13,6 +15,7 @@ export default function BookDetailPage({ params }: { params: Promise<{ id: strin
   const [book, setBook] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showAuth, setShowAuth] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -53,8 +56,13 @@ export default function BookDetailPage({ params }: { params: Promise<{ id: strin
             <button onClick={() => router.back()} className="btn btn-primary" style={{ cursor: 'pointer', marginTop: '24px' }}>Quay lại</button>
           </div>
         )}
-        {book && <BookDetail book={book} />}
+        {book && (
+          <CartProvider>
+            <BookDetail book={book} onRequireAuth={() => setShowAuth(true)} />
+          </CartProvider>
+        )}
       </main>
+      {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
     </>
   );
 }

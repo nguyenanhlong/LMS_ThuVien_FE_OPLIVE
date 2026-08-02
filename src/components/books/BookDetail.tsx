@@ -4,9 +4,19 @@ import { ArrowLeftIcon, BookIcon } from '@/components/ui/icons';
 import { getCover } from '@/lib/category-covers';
 import Button from '@/components/ui/Button';
 import Link from 'next/link';
+import { useAuth } from '@/context/AuthContext';
+import { useCart } from '@/context/CartContext';
 
-export default function BookDetail({ book }: any) {
+export default function BookDetail({ book, onRequireAuth }: any) {
   const cover = getCover(book.category);
+  const { user } = useAuth();
+  const { addItem, isInCart } = useCart();
+  const inCart = isInCart(book.id);
+
+  const handleAddToCart = () => {
+    if (!user) { onRequireAuth?.(); return; }
+    addItem(book);
+  };
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: '40px', alignItems: 'start' }}>
@@ -112,6 +122,21 @@ export default function BookDetail({ book }: any) {
             </div>
           ))}
         </div>
+
+        {book.status === 'AVAILABLE' ? (
+          <button
+            onClick={handleAddToCart}
+            className={`btn ${inCart ? 'btn-secondary' : 'btn-primary'}`}
+            disabled={inCart}
+            style={{ padding: '14px 32px', fontSize: '1rem' }}
+          >
+            {inCart ? 'Đã Có Trong Giỏ' : 'Thêm Vào Giỏ Hàng'}
+          </button>
+        ) : (
+          <button className="btn btn-secondary" disabled style={{ padding: '14px 32px', fontSize: '1rem', opacity: 0.5, cursor: 'not-allowed' }}>
+            Không Sẵn Sàng Cho Mượn
+          </button>
+        )}
       </div>
     </div>
   );
