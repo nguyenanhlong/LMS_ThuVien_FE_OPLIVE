@@ -7,6 +7,7 @@ export default function BookModal({ open, book, onClose, onSubmit, loading }: an
   return (
     <Modal
       open={open}
+      wide
       title={book ? 'Chỉnh Sửa Thông Tin Sách' : 'Thêm Đầu Sách Mới'}
       subtitle={book ? 'Cập nhật thông tin đầu sách' : 'Bổ sung sách vào kho thư viện'}
       onClose={onClose}
