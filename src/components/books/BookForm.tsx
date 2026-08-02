@@ -5,6 +5,7 @@ import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import MoneyInput from '@/components/ui/MoneyInput';
 import { getCategoriesApi, getSubCategoriesApi } from '@/lib/api';
+import { resolveImageUrl } from '@/utils/mappers';
 
 const sectionTitle: React.CSSProperties = {
   margin: '0 0 18px',
@@ -100,6 +101,7 @@ export default function BookForm({ initialData, onSubmit, onCancel, loading }: a
         fee_per_week: initialData.fee_per_week ?? 0,
         fee_per_month: initialData.fee_per_month ?? 0,
       });
+      setPreview(initialData.image_url ? resolveImageUrl(initialData.image_url) : '');
       if (initialData.sub_category_id) {
         pendingSubCatRef.current = String(initialData.sub_category_id);
         (async () => {
