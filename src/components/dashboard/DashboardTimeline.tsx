@@ -119,24 +119,31 @@ export default function DashboardTimeline() {
         <div className="empty-state" style={{ padding: 40 }}>{'Ch\u01b0a c\u00f3 d\u1eef li\u1ec7u trong kho\u1ea3ng th\u1eddi gian n\u00e0y'}</div>
       ) : (
         <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -8 }}>
+          <LineChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 8 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
             <XAxis dataKey="label" tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
+            <YAxis
+              tick={{ fill: '#94a3b8', fontSize: 11 }}
+              axisLine={false}
+              tickLine={false}
+              allowDecimals={false}
+              width={70}
+              tickFormatter={(value) => new Intl.NumberFormat('vi-VN', { notation: 'compact' }).format(value)}
+              />
             <Tooltip
-  contentStyle={{ background: '#1b2437', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: '0.8rem' }}
-  labelStyle={{ color: '#f8fafc', fontWeight: 600 }}
-  formatter={(value: any, name: any) => {
-    const val = Number(value || 0);
-    const metricName = String(name || '');
-    const m = METRIC_OPTIONS.find(o => o.value === metricName);
+                contentStyle={{ background: '#1b2437', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: '0.8rem' }}
+                labelStyle={{ color: '#f8fafc', fontWeight: 600 }}
+                formatter={(value: any, name: any) => {
+                const val = Number(value || 0);
+                const metricName = String(name || '');
+                const m = METRIC_OPTIONS.find(o => o.value === metricName);
     
-    return [
-      isCurrency(metricName) ? fmtCurrency(val) : val, 
-      m?.label || metricName
-    ];
-  }}
-/>
+            return [
+            isCurrency(metricName) ? fmtCurrency(val) : val, 
+             m?.label || metricName
+             ];
+        }}
+        />
             <Legend
               formatter={(value: string) => METRIC_OPTIONS.find(o => o.value === value)?.label || value}
               wrapperStyle={{ fontSize: '0.75rem' }}

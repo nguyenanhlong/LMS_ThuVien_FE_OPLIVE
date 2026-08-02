@@ -18,6 +18,15 @@ const LOAN_STATUS_LABELS: Record<string, { label: string; variant: string }> = {
   OVERDUE: { label: 'Qu\u00e1 h\u1ea1n', variant: 'danger' },
 };
 
+const NAV_LABELS: Record<string, { section: string; label: string }> = {
+  books: { section: 'books', label: 'Qu\u1EA3n l\u00FD s\u00E1ch \u2192' },
+  available: { section: 'books', label: 'Qu\u1EA3n l\u00FD s\u00E1ch \u2192' },
+  borrowed: { section: 'loans', label: 'Qu\u1EA3n l\u00FD m\u01B0\u1EE3n tr\u1EA3 \u2192' },
+  pending: { section: 'loans', label: 'Qu\u1EA3n l\u00FD m\u01B0\u1EE3n tr\u1EA3 \u2192' },
+  overdue: { section: 'loans', label: 'Qu\u1EA3n l\u00FD m\u01B0\u1EE3n tr\u1EA3 \u2192' },
+  members: { section: 'users', label: 'Qu\u1EA3n l\u00FD \u0111\u1ED9c gi\u1EA3 \u2192' },
+};
+
 export default function DashboardSection({ onNavigate }: { onNavigate?: (section: string) => void }) {
   const [summary, setSummary] = useState<any>(null);
   const [loanStats, setLoanStats] = useState<any[]>([]);
@@ -27,7 +36,6 @@ export default function DashboardSection({ onNavigate }: { onNavigate?: (section
   const [activeCard, setActiveCard] = useState<string | null>(null);
   const [cardDetail, setCardDetail] = useState<any[]>([]);
   const [detailLoading, setDetailLoading] = useState(false);
-  const [showAllMembers, setShowAllMembers] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -50,11 +58,10 @@ export default function DashboardSection({ onNavigate }: { onNavigate?: (section
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const handleCardClick = async (key: string) => {
-    if (!key || activeCard === key) { setActiveCard(null); setCardDetail([]); setShowAllMembers(false); return; }
+    if (!key || activeCard === key) { setActiveCard(null); setCardDetail([]); return; }
     setActiveCard(key);
     setDetailLoading(true);
     setCardDetail([]);
-    setShowAllMembers(false);
     try {
       switch (key) {
         case 'books':
@@ -82,8 +89,8 @@ export default function DashboardSection({ onNavigate }: { onNavigate?: (section
         case 'revenue': {
           if (summary) setCardDetail([
             { label: 'Ph\u00ed thu\u00ea', value: summary.rental_revenue },
-            { label: 'Ti\u1ec1n ph\u1ea1t', value: summary.fine_revenue },
-            { label: 'B\u1ed3i th\u01b0\u1eddng s\u00e1ch', value: summary.lost_book_revenue },
+            { label: 'Ti\u1ec1n ph\u1ea1t tr\u1ec5', value: summary.fine_revenue },
+            { label: 'B\u1ed3i th\u01b0\u1eddng s\u00e1ch m\u1ea5t', value: summary.lost_book_revenue },
             { label: 'T\u1ed5ng doanh thu', value: summary.total_revenue },
           ]);
           break;
@@ -103,6 +110,9 @@ export default function DashboardSection({ onNavigate }: { onNavigate?: (section
     setDetailLoading(false);
   };
 
+  const fmtCurrency = (n: number) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(n);
+  const navInfo = activeCard ? NAV_LABELS[activeCard] : null;
+
   if (loading && !summary) return <div className="empty-state"><p>{'\u0110ang t\u1ea3i...'}</p></div>;
 
   return (
@@ -118,8 +128,8 @@ export default function DashboardSection({ onNavigate }: { onNavigate?: (section
           ) : activeCard === 'members' ? (
             <div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {cardDetail.slice(0, showAllMembers ? cardDetail.length : 5).map((u: any, i: number) => (
-                  <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 0', borderBottom: i < Math.min(cardDetail.length, showAllMembers ? cardDetail.length : 5) - 1 ? '1px solid var(--border)' : 'none' }}>
+                {cardDetail.slice(0, 5).map((u: any, i: number) => (
+                  <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 0', borderBottom: i < Math.min(cardDetail.length, 5) - 1 ? '1px solid var(--border)' : 'none' }}>
                     <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem', fontWeight: 700, flexShrink: 0 }}>
                       {(u.full_name || u.username || '?').charAt(0).toUpperCase()}
                     </div>
@@ -130,26 +140,14 @@ export default function DashboardSection({ onNavigate }: { onNavigate?: (section
                   </div>
                 ))}
               </div>
-              {cardDetail.length > 5 && (
-                <div style={{ display: 'flex', gap: 12, marginTop: 16, justifyContent: 'center' }}>
-                  <button className="btn btn-secondary" style={{ padding: '8px 20px', fontSize: '0.85rem' }} onClick={() => setShowAllMembers(!showAllMembers)}>
-                    {showAllMembers ? 'Thu g\u1ECDn' : `Xem t\u1EA5t c\u1EA3 ${cardDetail.length}`}
-                  </button>
-                  {onNavigate && (
-                    <button className="btn btn-primary" style={{ padding: '8px 20px', fontSize: '0.85rem' }} onClick={() => onNavigate('users')}>
-                      {'Qu\u1EA3n l\u00FD \u0111\u1ED9c gi\u1EA3 \u2192'}
-                    </button>
-                  )}
-                </div>
-              )}
             </div>
           ) : activeCard === 'revenue' ? (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '8px 24px', fontSize: '0.9rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '10px 24px', fontSize: '0.9rem' }}>
               {cardDetail.map((item: any, i: number) => (
                 <div key={i} style={{ display: 'contents' }}>
-                  <span style={{ color: 'var(--text-muted)' }}>{item.label}</span>
-                  <span style={{ textAlign: 'right', fontWeight: 700, color: 'var(--success)' }}>
-                    {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(item.value)}
+                  <span style={{ color: i === cardDetail.length - 1 ? 'var(--text-primary)' : 'var(--text-muted)', fontWeight: i === cardDetail.length - 1 ? 700 : 400 }}>{item.label}</span>
+                  <span style={{ textAlign: 'right', fontWeight: 700, color: i === cardDetail.length - 1 ? 'var(--primary)' : 'var(--success)' }}>
+                    {fmtCurrency(item.value)}
                   </span>
                 </div>
               ))}
@@ -159,7 +157,7 @@ export default function DashboardSection({ onNavigate }: { onNavigate?: (section
               <table className="custom-table">
                 <thead><tr><th>{'T\u00ean s\u00e1ch'}</th><th>{'T\u00e1c gi\u1ea3'}</th><th>{'T\u1ed5ng'}</th><th>{'C\u00f2n'}</th><th>{'\u0110ang m\u01b0\u1ee3n'}</th></tr></thead>
                 <tbody>
-                  {cardDetail.map((b: any) => (
+                  {cardDetail.slice(0, 5).map((b: any) => (
                     <tr key={b.id}>
                       <td style={{ fontWeight: 600 }}>{b.title}</td>
                       <td style={{ color: 'var(--text-muted)' }}>{b.author}</td>
@@ -176,7 +174,7 @@ export default function DashboardSection({ onNavigate }: { onNavigate?: (section
               <table className="custom-table">
                 <thead><tr><th>{'\u0110\u1ed9c gi\u1ea3'}</th><th>{'S\u00e1ch'}</th><th>{'Ng\u00e0y m\u01b0\u1ee3n'}</th><th>{'H\u1ea1n tr\u1ea3'}</th><th>{'Tr\u1ea1ng th\u00e1i'}</th></tr></thead>
                 <tbody>
-                  {cardDetail.map((l: any) => {
+                  {cardDetail.slice(0, 5).map((l: any) => {
                     const s = LOAN_STATUS_LABELS[l.status] || { label: l.status, variant: 'muted' };
                     return (
                       <tr key={l.id}>
@@ -190,6 +188,15 @@ export default function DashboardSection({ onNavigate }: { onNavigate?: (section
                   })}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {/* N\u00fat chuy\u1ec3n sang section t\u01b0\u01a1ng \u1ee9ng */}
+          {navInfo && onNavigate && (
+            <div style={{ marginTop: 16, textAlign: 'center' }}>
+              <button className="btn btn-primary" style={{ padding: '8px 24px', fontSize: '0.85rem' }} onClick={() => onNavigate(navInfo.section)}>
+                {navInfo.label}
+              </button>
             </div>
           )}
         </div>
@@ -216,14 +223,8 @@ export default function DashboardSection({ onNavigate }: { onNavigate?: (section
         </div>
       )}
 
-      <div style={{ marginTop: 24 }}>
-        <DashboardChart data={loanStats} />
-      </div>
-
-      <div style={{ marginTop: 24 }}>
-        <DashboardTimeline />
-      </div>
-
+      <div style={{ marginTop: 24 }}><DashboardChart data={loanStats} /></div>
+      <div style={{ marginTop: 24 }}><DashboardTimeline /></div>
       <div style={{ marginTop: 24 }}>
         <h2 className="section-title">{'Ho\u1ea1t \u0110\u1ed9ng G\u1ea7n \u0110\u00e2y'}</h2>
         <RecentLoans loans={recentLoans} loading={loading} />
