@@ -124,19 +124,19 @@ export default function DashboardTimeline() {
             <XAxis dataKey="label" tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={false} tickLine={false} />
             <YAxis tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
             <Tooltip
-  contentStyle={{ background: '#1b2437', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: '0.8rem' }}
-  labelStyle={{ color: '#f8fafc', fontWeight: 600 }}
-  formatter={(value: any, name: any) => {
-    const val = Number(value || 0);
-    const metricName = String(name || '');
-    const m = METRIC_OPTIONS.find(o => o.value === metricName);
+                contentStyle={{ background: '#1b2437', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: '0.8rem' }}
+                labelStyle={{ color: '#f8fafc', fontWeight: 600 }}
+                formatter={(value: any, name: any) => {
+                const val = Number(value || 0);
+                const metricName = String(name || '');
+                const m = METRIC_OPTIONS.find(o => o.value === metricName);
     
-    return [
-      isCurrency(metricName) ? fmtCurrency(val) : val, 
-      m?.label || metricName
-    ];
-  }}
-/>
+            return [
+            isCurrency(metricName) ? fmtCurrency(val) : val, 
+             m?.label || metricName
+             ];
+        }}
+        />
             <Legend
               formatter={(value: string) => METRIC_OPTIONS.find(o => o.value === value)?.label || value}
               wrapperStyle={{ fontSize: '0.75rem' }}
