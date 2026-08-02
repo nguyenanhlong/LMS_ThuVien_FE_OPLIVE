@@ -7,11 +7,14 @@ import { mapBook } from '@/utils/mappers';
 import BookDetail from '@/components/books/BookDetail';
 import { ArrowLeftIcon } from '@/components/ui/icons';
 import { CartProvider } from '@/context/CartContext';
+import { useAuth } from '@/context/AuthContext';
 import AuthModal from '@/components/auth/AuthModal';
 
 export default function BookDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
+  const { user } = useAuth();
+  const isStaff = user?.role === 'ADMIN' || user?.role === 'LIBRARIAN';
   const [book, setBook] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -58,7 +61,7 @@ export default function BookDetailPage({ params }: { params: Promise<{ id: strin
         )}
         {book && (
           <CartProvider>
-            <BookDetail book={book} onRequireAuth={() => setShowAuth(true)} />
+            <BookDetail book={book} onRequireAuth={() => setShowAuth(true)} isStaff={isStaff} />
           </CartProvider>
         )}
       </main>
