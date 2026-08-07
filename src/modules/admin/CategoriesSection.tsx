@@ -252,9 +252,9 @@ export default function CategoriesSection({ permissions, userRole }: { permissio
             <div className="modal-header">
               <h3 className="modal-title">
                 {modal.type === 'addCat' ? 'Thêm Danh Mục' :
-                 modal.type === 'editCat' ? 'Sửa Danh Mục' :
+                 modal.type === 'editCat' ? `Sửa Danh Mục: ${modal.cat.name}` :
                  modal.type === 'addSub' ? `Thêm Danh Mục Con (${modal.cat.name})` :
-                 'Sửa Danh Mục Con'}
+                 `Sửa Danh Mục Con: ${modal.sub.name}`}
               </h3>
               <button onClick={() => setModal(null)} className="modal-close">
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4l8 8M12 4l-8 8" /></svg>

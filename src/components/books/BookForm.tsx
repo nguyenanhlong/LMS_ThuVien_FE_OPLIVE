@@ -29,7 +29,8 @@ const spanFull: React.CSSProperties = { gridColumn: '1 / -1' };
 
 export default function BookForm({ initialData, onSubmit, onCancel, loading }: any) {
   const fileRef = useRef<HTMLInputElement>(null);
-  const pendingSubCatRef = useRef<string>('');
+  // Giữ mã danh mục con của sách đang sửa để khi tải danh sách sub về không bị ép về sub đầu tiên.
+  const editSubIdRef = useRef<string>('');
   const [categories, setCategories] = useState<any[]>([]);
   const [subCategories, setSubCategories] = useState<any[]>([]);
   const [selectedCatId, setSelectedCatId] = useState('');
@@ -65,54 +66,57 @@ export default function BookForm({ initialData, onSubmit, onCancel, loading }: a
   }, []);
 
   useEffect(() => {
-    if (!selectedCatId) { setSubCategories([]); set('sub_category_id', ''); return; }
+    if (!selectedCatId) { setSubCategories([]); return; }
     setFetchingSubs(true);
     (async () => {
       try {
         const data = await getSubCategoriesApi(Number(selectedCatId));
         const list = Array.isArray(data) ? data : (data as any)?.items || [];
         setSubCategories(list);
-        const pre = pendingSubCatRef.current;
-        const stillValid = pre && list.some((s: any) => s.id === Number(pre));
-        set('sub_category_id', stillValid ? pre : (list.length > 0 ? String(list[0].id) : ''));
-        if (pre) pendingSubCatRef.current = '';
+        if (editSubIdRef.current) {
+          // giữ đúng danh mục con hiện có, không nhảy về sub đầu tiên.
+          const keep = editSubIdRef.current;
+          editSubIdRef.current = '';
+          set('sub_category_id', keep);
+        } else {
+          set('sub_category_id', list.length > 0 ? String(list[0].id) : '');
+        }
       } catch { setSubCategories([]); set('sub_category_id', ''); }
       setFetchingSubs(false);
     })();
   }, [selectedCatId]);
 
   useEffect(() => {
-    if (initialData) {
-      setForm({
-        sub_category_id: String(initialData.sub_category_id ?? ''),
-        title: initialData.title || '',
-        isbn: initialData.isbn || '',
-        author: initialData.author || '',
-        image_url: initialData.image_url || '',
-        publisher: initialData.publisher || '',
-        publisher_year: initialData.publisher_year || new Date().getFullYear(),
-        description: initialData.description || '',
-        total_quantity: initialData.total_quantity ?? 1,
-        max_borrow_days: initialData.max_borrow_days ?? 14,
-        deposit_amount: initialData.deposit_amount ?? 0,
-        fine_per_day: initialData.fine_per_day ?? 0,
-        replacement_cost: initialData.replacement_cost ?? 0,
-        fee_per_day: initialData.fee_per_day ?? 0,
-        fee_per_week: initialData.fee_per_week ?? 0,
-        fee_per_month: initialData.fee_per_month ?? 0,
-      });
-      setPreview(initialData.image_url ? resolveImageUrl(initialData.image_url) : '');
-      if (initialData.sub_category_id) {
-        pendingSubCatRef.current = String(initialData.sub_category_id);
-        (async () => {
-          try {
-            const allSubs = await getSubCategoriesApi();
-            const subs = Array.isArray(allSubs) ? allSubs : (allSubs as any)?.items || [];
-            const match = subs.find((s: any) => s.id === initialData.sub_category_id);
-            if (match) setSelectedCatId(String(match.category_id));
-          } catch { }
-        })();
-      }
+    if (!initialData) return;
+    setForm({
+      sub_category_id: String(initialData.sub_category_id ?? ''),
+      title: initialData.title || '',
+      isbn: initialData.isbn || '',
+      author: initialData.author || '',
+      image_url: initialData.image_url || '',
+      publisher: initialData.publisher || '',
+      publisher_year: initialData.publisher_year || new Date().getFullYear(),
+      description: initialData.description || '',
+      total_quantity: initialData.total_quantity ?? 1,
+      max_borrow_days: initialData.max_borrow_days ?? 14,
+      deposit_amount: initialData.deposit_amount ?? 0,
+      fine_per_day: initialData.fine_per_day ?? 0,
+      replacement_cost: initialData.replacement_cost ?? 0,
+      fee_per_day: initialData.fee_per_day ?? 0,
+      fee_per_week: initialData.fee_per_week ?? 0,
+      fee_per_month: initialData.fee_per_month ?? 0,
+    });
+    setPreview(initialData.image_url ? resolveImageUrl(initialData.image_url) : '');
+    if (initialData.sub_category_id) {
+      editSubIdRef.current = String(initialData.sub_category_id);
+      (async () => {
+        try {
+          const allSubs = await getSubCategoriesApi();
+          const subs = Array.isArray(allSubs) ? allSubs : (allSubs as any)?.items || [];
+          const match = subs.find((s: any) => s.id === initialData.sub_category_id);
+          if (match) setSelectedCatId(String(match.category_id));
+        } catch { }
+      })();
     }
   }, [initialData]);
 
@@ -127,11 +131,12 @@ export default function BookForm({ initialData, onSubmit, onCancel, loading }: a
     e.preventDefault();
     const payload: any = {
       ...form,
-      sub_category_id: Number(form.sub_category_id),
+      sub_category_id: form.sub_category_id ? Number(form.sub_category_id) : undefined,
       publisher_year: Number(form.publisher_year),
       total_quantity: Number(form.total_quantity),
       max_borrow_days: Number(form.max_borrow_days),
     };
+    if (!payload.sub_category_id) delete payload.sub_category_id;
     if (!payload.isbn) delete payload.isbn;
     else if (initialData && payload.isbn === initialData.isbn) delete payload.isbn;
     onSubmit({ ...payload, _file: file });
