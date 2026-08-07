@@ -5,19 +5,19 @@ import {
   getCategoriesApi, createCategoryApi, updateCategoryApi, deleteCategoryApi,
   createSubCategoryApi, updateSubCategoryApi, deleteSubCategoryApi
 } from '@/lib/api';
+import { PERMISSIONS, hasPermission } from '@/utils/permissions';
 import Toast from '@/components/ui/Toast';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 
 export default function CategoriesSection({ permissions, userRole }: { permissions?: string[]; userRole?: string }) {
   const isAdmin = userRole === 'ADMIN';
-  const perms = permissions || [];
-  const catCreate = isAdmin || perms.includes('CATEGORY_CREATE');
-  const catUpdate = isAdmin || perms.includes('CATEGORY_UPDATE');
-  const catDelete = isAdmin || perms.includes('CATEGORY_DELETE');
-  const subView = isAdmin || perms.includes('SUB_CATEGORY_VIEW');
-  const subCreate = isAdmin || perms.includes('SUB_CATEGORY_CREATE');
-  const subUpdate = isAdmin || perms.includes('SUB_CATEGORY_UPDATE');
-  const subDelete = isAdmin || perms.includes('SUB_CATEGORY_DELETE');
+  const catCreate = isAdmin || hasPermission(permissions, PERMISSIONS.CATEGORY_CREATE);
+  const catUpdate = isAdmin || hasPermission(permissions, PERMISSIONS.CATEGORY_UPDATE);
+  const catDelete = isAdmin || hasPermission(permissions, PERMISSIONS.CATEGORY_DELETE);
+  const subView = isAdmin || hasPermission(permissions, PERMISSIONS.SUB_CATEGORY_VIEW);
+  const subCreate = isAdmin || hasPermission(permissions, PERMISSIONS.SUB_CATEGORY_CREATE);
+  const subUpdate = isAdmin || hasPermission(permissions, PERMISSIONS.SUB_CATEGORY_UPDATE);
+  const subDelete = isAdmin || hasPermission(permissions, PERMISSIONS.SUB_CATEGORY_DELETE);
 
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);

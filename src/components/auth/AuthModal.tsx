@@ -58,7 +58,7 @@ export default function AuthModal({ onClose, initialMessage }: { onClose: () => 
     }
     setSubmitting(false);
   };
-
+  //Kiem tra register, neu thanh cong setRegisteredEmail roi chuyen sang UI xac thuc email
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -83,7 +83,7 @@ export default function AuthModal({ onClose, initialMessage }: { onClose: () => 
     }
     setResending(false);
   };
-
+  //forgotPasswordApi luon hien thi thong bao da gui email
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');

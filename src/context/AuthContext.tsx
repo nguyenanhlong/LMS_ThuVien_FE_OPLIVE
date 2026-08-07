@@ -48,7 +48,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // JWT hết hạn/không hợp lệ — gql() sẽ tự clearTokens() nếu refresh cũng thất bại
     }
   }, []);
-
+  //neu getToken co gia tri decode payload ngay de setUser() tam thoi, 
+  //refreshProfile() chay nen de dong bo du lieu chuan tu server, cuoi cung setLoading(false) trong finally
+  //neu decode loi clearTokens() va coi nhu chua dang nhap
   useEffect(() => {
     if (getToken()) {
       try {
@@ -70,6 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(false);
   }, [refreshProfile]);
 
+  //LoginAPI
   const login = useCallback(async (username: string, password: string) => {
     await loginApi(username, password);
     const payload = JSON.parse(atob(getToken()!.split('.')[1]));
@@ -87,10 +90,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await refreshProfile();
   }, [refreshProfile]);
 
+  //RegisterAPI
   const register = useCallback(async (data: { username: string; full_name: string; email: string; password: string }) => {
     await registerApi(data);
   }, []);
 
+  //LogoutAPI chi lam 2 viec la clearToken() (xoa access token va refresh token trong localStorage) va setUser(null)
   const logout = useCallback(() => {
     clearTokens();
     setUser(null);

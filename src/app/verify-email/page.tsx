@@ -18,6 +18,7 @@ function VerifyEmailContent() {
   const [resending, setResending] = useState(false);
   const [resendEmail, setResendEmail] = useState('');
 
+  // neu co token thi goi verifyEmailApi, neu ko status = error
   const doVerify = useCallback(async () => {
     if (!token) { setStatus('error'); setMessage('Token xác thực không hợp lệ.'); return; }
     try {
@@ -35,7 +36,7 @@ function VerifyEmailContent() {
       }
     }
   }, [token]);
-
+  // goi doVerify() ngay khi component mount, neu token thay doi thi goi lai
   useEffect(() => { doVerify(); }, [doVerify]);
 
   const handleResend = async () => {

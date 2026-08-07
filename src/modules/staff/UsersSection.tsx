@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { graphqlQuery } from '@/lib/api';
+import { PERMISSIONS, hasPermission } from '@/utils/permissions';
 import { useAuth } from '@/context/AuthContext';
 import UserEditModal from '@/components/users/UserEditModal';
 import Toast from '@/components/ui/Toast';
@@ -16,8 +17,8 @@ export default function UsersSection({ permissions, userRole }: { permissions?: 
   const [totalPages, setTotalPages] = useState(1);
   const [editUser, setEditUser] = useState<any>(null);
   const [toast, setToast] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
-  const canEditRole = isAdmin || permissions?.includes('USER_UPDATE_ROLE');
-  const canEditStatus = isAdmin || permissions?.includes('USER_UPDATE_STATUS');
+  const canEditRole = isAdmin || hasPermission(permissions, PERMISSIONS.USER_UPDATE_ROLE);
+  const canEditStatus = isAdmin || hasPermission(permissions, PERMISSIONS.USER_UPDATE_STATUS);
   const canEdit = canEditRole || canEditStatus;
 
   const showToast = useCallback((text: string, type: 'success' | 'error' = 'success') => {
