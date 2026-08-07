@@ -18,10 +18,11 @@ function ResetPasswordContent() {
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  // kiem tra token tu query string bang useSearchParams
   useEffect(() => {
     if (!token) { setStatus('error'); setMessage('Token đặt lại mật khẩu không hợp lệ.'); }
   }, [token]);
-
+  // so khop mat khau moi va xac nhan ngay tren FE truoc khi goi resetPasswordApi
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newPassword !== confirmPassword) { setMessage('Mật khẩu xác nhận không khớp'); return; }
