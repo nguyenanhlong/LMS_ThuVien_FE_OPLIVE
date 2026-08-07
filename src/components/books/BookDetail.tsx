@@ -129,6 +129,7 @@ export default function BookDetail({ book, onRequireAuth, isStaff }: any) {
           {[
             { label: 'ID sách', value: book.id },
             { label: 'Thể loại', value: book.category },
+            { label: 'Danh mục con', value: book.sub_category_name || '—' },
             { label: 'Tác giả', value: book.author },
             { label: 'Trạng thái', value: book.status === 'AVAILABLE' ? 'Sẵn sàng' : 'Đang mượn' },
             { label: 'ISBN', value: book.isbn || '—' },
