@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { getDashboardSummaryApi, getDashboardLoanStatusApi, getDashboardTopBooksApi, getBooksApi, getLoansApi, graphqlQuery } from '@/lib/api';
+import { getDashboardSummaryApi, getDashboardLoanStatusApi, getDashboardTopBooksApi, getBooksApi, getLoansApi, graphqlQuery, getRolePermissionsByRoleApi } from '@/lib/api';
 import { mapLoan, mapBook, resolveImageUrl } from '@/utils/mappers';
+import { PERMISSIONS, hasPermission } from '@/utils/permissions';
 import DashboardCards from '@/components/dashboard/DashboardCards';
 import DashboardChart from '@/components/dashboard/DashboardChart';
 import DashboardTimeline from '@/components/dashboard/DashboardTimeline';
@@ -27,7 +28,25 @@ const NAV_LABELS: Record<string, { section: string; label: string }> = {
   members: { section: 'users', label: 'Qu\u1EA3n l\u00FD \u0111\u1ED9c gi\u1EA3 \u2192' },
 };
 
-export default function DashboardSection({ onNavigate }: { onNavigate?: (section: string) => void }) {
+export default function DashboardSection({ onNavigate, permissions, userRole }: { onNavigate?: (section: string) => void; permissions?: string[]; userRole?: string }) {
+  const isAdmin = userRole === 'ADMIN';
+  const [allowed, setAllowed] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    if (userRole === 'ADMIN') { setAllowed(true); return; }
+    if (!userRole) { setAllowed(hasPermission(permissions, PERMISSIONS.DASHBOARD_VIEW)); return; }
+    getRolePermissionsByRoleApi(userRole)
+      .then((data: any) => {
+        const ok = (Array.isArray(data) ? data : []).some((p: any) => p.permission === PERMISSIONS.DASHBOARD_VIEW);
+        if (active) setAllowed(ok);
+      })
+      .catch(() => { if (active) setAllowed(hasPermission(permissions, PERMISSIONS.DASHBOARD_VIEW)); });
+    return () => { active = false; };
+  }, [userRole]);
+
+  const canViewStats = isAdmin || allowed === true;
+
   const [summary, setSummary] = useState<any>(null);
   const [loanStats, setLoanStats] = useState<any[]>([]);
   const [topBooks, setTopBooks] = useState<any[]>([]);
@@ -39,6 +58,7 @@ export default function DashboardSection({ onNavigate }: { onNavigate?: (section
 
   const fetchData = useCallback(async () => {
     setLoading(true);
+    if (!canViewStats) { setLoading(false); return; }
     try { setSummary(await getDashboardSummaryApi()); } catch (e) { console.error('Summary:', e); }
     try { setLoanStats(await getDashboardLoanStatusApi()); } catch (e) { console.error('LoanStats:', e); }
     try { setTopBooks(await getDashboardTopBooksApi(5)); } catch (e) { console.error('TopBooks:', e); }
@@ -53,7 +73,7 @@ export default function DashboardSection({ onNavigate }: { onNavigate?: (section
       setRecentLoans(((loanRes as any).loans?.items || []).map(mapLoan));
     } catch { setRecentLoans([]); }
     setLoading(false);
-  }, []);
+  }, [canViewStats]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -112,6 +132,16 @@ export default function DashboardSection({ onNavigate }: { onNavigate?: (section
 
   const fmtCurrency = (n: number) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(n);
   const navInfo = activeCard ? NAV_LABELS[activeCard] : null;
+
+  if (!isAdmin && allowed === null) return <div className="empty-state"><p>{'\u0110ang t\u1ea3i...'}</p></div>;
+
+  if (!canViewStats) {
+    return (
+      <div className="empty-state" style={{ padding: 48 }}>
+        <p>Bạn không có quyền xem thống kê. Vui lòng liên hệ quản trị viên.</p>
+      </div>
+    );
+  }
 
   if (loading && !summary) return <div className="empty-state"><p>{'\u0110ang t\u1ea3i...'}</p></div>;
 
