@@ -16,7 +16,7 @@ export default function AdminModule() {
     >
       {(section: string, permissions: string[], userRole?: string, navigate?: (s: string) => void) => (
         <>
-          {section === 'dashboard' && <DashboardSection onNavigate={navigate} />}
+          {section === 'dashboard' && <DashboardSection onNavigate={navigate} permissions={permissions} userRole={userRole} />}
           {section === 'books' && <BooksSection />}
           {section === 'loans' && <LoansSection />}
           {section === 'users' && <UsersSection permissions={permissions} userRole={userRole} />}

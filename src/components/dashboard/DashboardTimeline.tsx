@@ -49,7 +49,7 @@ export default function DashboardTimeline() {
     try {
       const res = await getDashboardTimelineApi({ from_date: fromDate, to_date: toDate, group_by: groupBy });
       setData(res || []);
-    } catch (e) { console.error('Timeline:', e); setData([]); }
+    } catch (e: any) { if (!(e?.message || '').includes('không có quyền')) console.error('Timeline:', e); setData([]); }
     setLoading(false);
   }, [fromDate, toDate, groupBy]);
 
